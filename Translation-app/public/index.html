@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Marketing Software</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"/>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .hero {
+      background-image: linear-gradient(to bottom, #f7f7f7, #fff);
+      padding: 100px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Email Marketing Software</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" 
+              aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link active" href="#">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="email-lists-link">Email Lists</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="email-templates-link">Email Templates</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="campaigns-link">Campaigns</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" id="reports-link">Reports</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <div class="row">
+      <!-- Dashboard -->
+      <div class="col-12" id="dashboard">
+        <h1>Dashboard</h1>
+        <p>Welcome to your email marketing software dashboard.</p>
+      </div>
+
+      <!-- Email Lists -->
+      <div class="col-12" id="email-lists" style="display: none;">
+        <h1>Email Lists</h1>
+        <button class="btn btn-primary mb-2" id="create-email-list-btn">Create Email List</button>
+        <table class="table">
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Description</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="email-lists-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Email Templates -->
+      <div class="col-12" id="email-templates" style="display: none;">
+        <h1>Email Templates</h1>
+        <button class="btn btn-primary mb-2" id="create-email-template-btn">Create Email Template</button>
+        <table class="table">
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Description</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="email-templates-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Campaigns -->
+      <div class="col-12" id="campaigns" style="display: none;">
+        <h1>Campaigns</h1>
+        <button class="btn btn-primary mb-2" id="create-campaign-btn">Create Campaign</button>
+        <table class="table">
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Description</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="campaigns-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Reports -->
+      <div class="col-12" id="reports" style="display: none;">
+        <h1>Reports</h1>
+        <table class="table">
+          <thead>
+            <tr><th>ID</th><th>Campaign Name</th><th>Open Rate</th><th>Click-Through Rate</th><th>Bounce Rate</th></tr>
+          </thead>
+          <tbody id="reports-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email List Modal -->
+  <div class="modal fade" id="create-email-list-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="create-email-list-form">
+          <div class="modal-header">
+            <h5 class="modal-title">Create Email List</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control" id="email-list-name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" id="email-list-description" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Create Email List</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Template Modal -->
+  <div class="modal fade" id="create-email-template-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="create-email-template-form">
+          <div class="modal-header">
+            <h5 class="modal-title">Create Email Template</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control" id="email-template-name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" id="email-template-description" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Create Email Template</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campaign Modal -->
+  <div class="modal fade" id="create-campaign-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="create-campaign-form">
+          <div class="modal-header">
+            <h5 class="modal-title">Create Campaign</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control" id="campaign-name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" id="campaign-description" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Create Campaign</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+  <script>
+    $(function () {
+      let emailLists = [], emailTemplates = [], campaigns = [], reports = [];
+
+      function hideAllSections() {
+        $('#dashboard, #email-lists, #email-templates, #campaigns, #reports').hide();
+      }
+
+      $('#email-lists-link').click(() => { hideAllSections(); $('#email-lists').show(); });
+      $('#email-templates-link').click(() => { hideAllSections(); $('#email-templates').show(); });
+      $('#campaigns-link').click(() => { hideAllSections(); $('#campaigns').show(); });
+      $('#reports-link').click(() => { hideAllSections(); $('#reports').show(); });
+
+      $('#create-email-list-btn').click(() => $('#create-email-list-modal').modal('show'));
+      $('#create-email-template-btn').click(() => $('#create-email-template-modal').modal('show'));
+      $('#create-campaign-btn').click(() => $('#create-campaign-modal').modal('show'));
+
+      $('#create-email-list-form').submit(function (e) {
+        e.preventDefault();
+        const name = $('#email-list-name').val();
+        const desc = $('#email-list-description').val();
+        emailLists.push({ id: emailLists.length + 1, name, description: desc });
+        $('#email-lists-tbody').append(`<tr><td>${emailLists.length}</td><td>${name}</td><td>${desc}</td><td><button class="btn btn-danger">Delete</button></td></tr>`);
+        $('#create-email-list-modal').modal('hide').find('form')[0].reset();
+      });
+
+      $('#create-email-template-form').submit(function (e) {
+        e.preventDefault();
+        const name = $('#email-template-name').val();
+        const desc = $('#email-template-description').val();
+        emailTemplates.push({ id: emailTemplates.length + 1, name, description: desc });
+        $('#email-templates-tbody').append(`<tr><td>${emailTemplates.length}</td><td>${name}</td><td>${desc}</td><td><button class="btn btn-danger">Delete</button></td></tr>`);
+        $('#create-email-template-modal').modal('hide').find('form')[0].reset();
+      });
+
+      $('#create-campaign-form').submit(function (e) {
+        e.preventDefault();
+        const name = $('#campaign-name').val();
+        const desc = $('#campaign-description').val();
+        const open = Math.floor(Math.random() * 100);
+        const click = Math.floor(Math.random() * 100);
+        const bounce = Math.floor(Math.random() * 100);
+        campaigns.push({ id: campaigns.length + 1, name, description: desc });
+        reports.push({ id: reports.length + 1, campaignName: name, openRate: open, clickThroughRate: click, bounceRate: bounce });
+
+        $('#campaigns-tbody').append(`<tr><td>${campaigns.length}</td><td>${name}</td><td>${desc}</td><td><button class="btn btn-danger">Delete</button></td></tr>`);
+        $('#reports-tbody').append(`<tr><td>${reports.length}</td><td>${name}</td><td>${open}%</td><td>${click}%</td><td>${bounce}%</td></tr>`);
+
+        $('#create-campaign-modal').modal('hide').find('form')[0].reset();
+      });
+    });
+  </script>
+</body>
+</html>

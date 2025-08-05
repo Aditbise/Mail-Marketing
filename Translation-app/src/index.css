@@ -1,0 +1,196 @@
+textarea{
+  width:100%;
+  max-width:960px;
+  height:300px;
+  padding:10px;
+  box-sizing:border-box;
+  border:2px solid #90fad738;
+  border-radius:4px;
+  font-size:16px;
+  resize:none;
+  min-height:100px;
+}
+textarea:active{
+  border:2px solid #90fad1;
+}
+.selectandtypediv{
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+.selectlang{
+  color: white;
+  font-size: 26px;
+  margin: 70px;
+  max-width: 200px;
+  margin-left: 218px;
+  margin-right: 10px;
+  align-content: center;
+  padding: 10px;
+  border-radius: 8px;
+}
+.innerdiv{
+  width: 100%;
+  max-width:960px;
+  min-width:200px;
+  align-items: center;
+}
+.div1{
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+  margin: 0 auto;
+  border: 1px solid hsla(0,0%,50%,0.8);
+  padding: 10px;
+}
+.rdiv{
+  background-color:lightsalmon;
+}
+.ldiv{
+  background-color:lightblue;
+}
+.rdiv,.ldiv{
+  flex: 1;
+  display:flex;
+  flex-direction:column;
+  padding:5px;
+  width: 100%;
+  width: 300px;
+  border-radius: 2px;
+}
+.imagecopy{
+  width: 30px;
+  margin-left: 0px;
+  padding-top: 80px;
+  padding-left: 0;
+}
+.imagecopy:hover{
+  border: #90fad1;
+}
+@media (max-width: 600px) {
+  .div1 {
+    flex-direction: column;
+  }
+  .rdiv {
+    margin-top: 10px;
+  }
+}
+.typehere,.translationhere{
+  align-content: center;
+  padding-bottom: 30px;
+  padding-top: 30px;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+.routing{
+  display: flex;
+}
+.sidebarjsx{
+  width: 250px;
+  height: 100vh;
+  background: #1f1e1e;
+  padding: 2rem;
+  color: #646cff;
+  font-size: 1.1rem;
+}
+body{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spaceinbetween{
+  display: flex;
+  gap:1rem;
+}
+.logindv{
+  position: relative;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.2);
+  padding: 20px;
+  padding-left: 30px;
+  padding-right: 30px;
+  backdrop-filter: blur(30px);
+  margin: 10px;
+}
+.logintextfi{
+  width: 100%;
+  height:100%;
+  background: transparent;
+  border:1px;
+  outline: none;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 3px;
+
+}
+.table{
+border: 1px solid rgb(255, 255, 255); 
+width: 100%;
+}
+.contactform{
+  display: table-cell;
+  max-width:90%;
+  min-width: 1000px;
+  display:flex;
+  align-items: center;
+  gap: 1rem;
+}
+.newcontactbutton .removecontactbutton {
+  height: 20px;
+  width: 180px;
+}
+.contactinfo{
+  height: 30px;
+  Width:800px;
+}
+.contactlistpagediv{
+  width: 1000px;
+}
