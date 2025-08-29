@@ -1,0 +1,50 @@
+
+.container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.hero {
+  max-width: 600px;
+  text-align: center;
+  padding: 40px;
+  background: #1e1e1e;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.title {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: #00d1b2;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: #ccc;
+  line-height: 1.6;
+}
+
+.primaryBtn {
+  background-color: #00b894;
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;}
+
+.loginText {
+  color: #aaa;
+  margin-top: 1rem;
+  font-size: 1rem;
+}
+
+.loginLink {
+  color: #74c0fc;
+  text-decoration: underline;
+}
