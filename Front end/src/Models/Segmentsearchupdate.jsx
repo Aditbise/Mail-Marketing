@@ -18,6 +18,12 @@ export default function Segmentsearchupdate({ open, onClose, editingSegment, isE
   const [segmentDescription, setSegmentDescription] = useState("");
   const [selectedEmailIds, setSelectedEmailIds] = useState([]);
   const [segmentEmails, setSegmentEmails] = useState([]);
+  // Preview old segment data before editing
+  const oldSegmentData = isEdit && editingSegment ? {
+    name: editingSegment.name,
+    description: editingSegment.description,
+    contacts: editingSegment.contacts || [],
+  } : null;
 
   useEffect(() => {
     fetchEmailList();
@@ -420,6 +426,34 @@ export default function Segmentsearchupdate({ open, onClose, editingSegment, isE
               {isEdit ? "Update Segment" : "Create Segment"}
             </button>
           </div>
+          {/* Preview Old Segment Data */}
+          {isEdit && oldSegmentData && (
+            <div style={{
+              marginBottom: "18px",
+              padding: "10px",
+              background: "#f8f8f8",
+              borderRadius: "8px",
+              border: "1px solid #ddd"
+            }}>
+              <h4 style={{ marginBottom: "8px" }}>Old Segment Data</h4>
+              <div><strong>Name:</strong> {oldSegmentData.name}</div>
+              <div><strong>Description:</strong> {oldSegmentData.description}</div>
+              <div>
+                <strong>Emails:</strong>
+                {oldSegmentData.contacts.length === 0 ? (
+                  <span style={{ marginLeft: "10px", color: "#e74c3c" }}>None</span>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                    {oldSegmentData.contacts.map(email => (
+                      <li key={email._id} style={{ color: "#222", fontWeight: "500" }}>
+                        {email.name} ({email.email})
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
           {/* Email List Table with Selection */}
           <table style={{ width: "100%", marginTop: "10px" }}>
             <thead>

@@ -137,3 +137,11 @@ app.get('/segments/:id', async (req, res) => {
         res.status(500).json({ message: 'Error fetching segment', error });
     }
 });
+app.put('/segments/:id', async (req, res) => {
+    try {
+        const updatedSegment = await SegmentModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updatedSegment);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating segment', error });
+    }
+});
