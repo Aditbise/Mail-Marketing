@@ -118,11 +118,6 @@ export default function Segmentsearch({ open, onClose }) {
   };
 
   if (!open) return null;
-
-  // const res = await axios.get(`http://localhost:3001/segments/${segmentId}`);
-  // const segment = res.data;
-  // // segment.contacts is now an array of email objects
-
   return (
     <>
       <div

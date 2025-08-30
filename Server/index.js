@@ -115,7 +115,7 @@ app.post('/segments', async (req, res) => {
 });
 app.get('/segments', async (req, res) => {
     try {
-        const segments = await SegmentModel.find();
+        const segments = await SegmentModel.find().populate('contacts');
         res.json(segments);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching segments', error });
@@ -136,12 +136,4 @@ app.get('/segments/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Error fetching segment', error });
     }
-});
-app.get('/segments/:id', async (req, res) => {
-  try {
-    const segment = await SegmentModel.findById(req.params.id).populate('contacts');
-    res.json(segment);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching segment', error });
-  }
 });

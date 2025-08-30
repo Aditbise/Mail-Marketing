@@ -53,11 +53,11 @@ export default function Segments() {
                     background: "#fafafa",
                   }}
                 >
-                  {segment.emails && segment.emails.length > 0 ? (
+                  {segment.contacts && segment.contacts.length > 0 ? (
                     <ul style={{ margin: 0, paddingLeft: "18px" }}>
-                      {segment.emails.map((email, idx) => (
-                        <li key={email._id || email}>
-                          {email.name ? `${email.name} (${email.email})` : email.email || email}
+                      {segment.contacts.map(email => (
+                        <li key={email._id} style={{ color: "#222", fontWeight: "500" }}>
+                          {email.name} ({email.email})
                         </li>
                       ))}
                     </ul>
