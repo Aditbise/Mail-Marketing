@@ -129,3 +129,19 @@ app.get('/segments/:id/contacts', async (req, res) => {
         res.status(500).json({ message: 'Error fetching contacts', error });
     }
 });
+app.get('/segments/:id', async (req, res) => {
+    try {
+        const segment = await SegmentModel.findById(req.params.id).populate('contacts');
+        res.json(segment);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching segment', error });
+    }
+});
+app.get('/segments/:id', async (req, res) => {
+  try {
+    const segment = await SegmentModel.findById(req.params.id).populate('contacts');
+    res.json(segment);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching segment', error });
+  }
+});

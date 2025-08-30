@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-export default function Segmentsearch({ open, onClose }) {
+export default function Segmentsearchupdate({ open, onClose, editingSegment, isEdit }) {
   const [emailList, setEmailList] = useState([]);
   const [filters, setFilters] = useState({
     name: "",
@@ -28,6 +28,26 @@ export default function Segmentsearch({ open, onClose }) {
       setFilteredList(emailList);
     }
   }, [emailList, searching]);
+
+  // Load segment data for editing
+  useEffect(() => {
+    if (isEdit && editingSegment) {
+      setSegmentName(editingSegment.name || "");
+      setSegmentDescription(editingSegment.description || "");
+      // If contacts are populated objects, use their _id; if just IDs, use as is
+      setSelectedEmailIds(
+        editingSegment.contacts
+          ? editingSegment.contacts.map(e => e._id || e)
+          : []
+      );
+      setSegmentEmails(editingSegment.contacts || []);
+    } else {
+      setSegmentName("");
+      setSegmentDescription("");
+      setSelectedEmailIds([]);
+      setSegmentEmails([]);
+    }
+  }, [editingSegment, isEdit, open]);
 
   const fetchEmailList = async () => {
     try {
@@ -95,33 +115,39 @@ export default function Segmentsearch({ open, onClose }) {
     setSegmentEmails(selectedEmails);
   };
 
-  // Optionally, handle segment creation (API call)
-  const handleCreateSegment = async () => {
+  // Handle segment creation or update
+  const handleSaveSegment = async () => {
     if (!segmentName || !segmentDescription || segmentEmails.length === 0) {
       alert("Please provide segment name, description, and select emails.");
       return;
     }
     try {
-      await axios.post("http://localhost:3001/segments", {
-      name: segmentName,
-      description: segmentDescription,
-      contacts: segmentEmails.map((e) => e._id), // <-- use 'contacts'
-    });
-      alert("Segment created!");
+      if (isEdit && editingSegment) {
+        await axios.put(`http://localhost:3001/segments/${editingSegment._id}`, {
+          name: segmentName,
+          description: segmentDescription,
+          contacts: segmentEmails.map((e) => e._id),
+        });
+        alert("Segment updated!");
+      } else {
+        await axios.post("http://localhost:3001/segments", {
+          name: segmentName,
+          description: segmentDescription,
+          contacts: segmentEmails.map((e) => e._id),
+        });
+        alert("Segment created!");
+      }
       setSegmentName("");
       setSegmentDescription("");
       setSegmentEmails([]);
       setSelectedEmailIds([]);
+      onClose();
     } catch (err) {
-      alert("Error creating segment.");
+      alert("Error saving segment.");
     }
   };
 
   if (!open) return null;
-
-  // const res = await axios.get(`http://localhost:3001/segments/${segmentId}`);
-  // const segment = res.data;
-  // // segment.contacts is now an array of email objects
 
   return (
     <>
@@ -151,6 +177,8 @@ export default function Segmentsearch({ open, onClose }) {
             minHeight: "400px",
             boxShadow: "0 12px 40px rgba(0,0,0,0.22)",
             position: "relative",
+            maxHeight: "90vh",
+            overflowY: "auto",
           }}
         >
           <button
@@ -181,7 +209,7 @@ export default function Segmentsearch({ open, onClose }) {
               fontSize: "1.3rem",
             }}
           >
-            Search and Create Segments
+            {isEdit ? "Edit Segment" : "Search and Create Segments"}
           </h2>
           {/* Filter/Search Section */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
@@ -372,7 +400,7 @@ export default function Segmentsearch({ open, onClose }) {
               )}
             </div>
             <button
-              onClick={handleCreateSegment}
+              onClick={handleSaveSegment}
               style={{
                 padding: "8px 18px",
                 borderRadius: "8px",
@@ -389,7 +417,7 @@ export default function Segmentsearch({ open, onClose }) {
               onMouseOver={e => (e.target.style.background = "#0056b3")}
               onMouseOut={e => (e.target.style.background = "#007bff")}
             >
-              Create Segment
+              {isEdit ? "Update Segment" : "Create Segment"}
             </button>
           </div>
           {/* Email List Table with Selection */}

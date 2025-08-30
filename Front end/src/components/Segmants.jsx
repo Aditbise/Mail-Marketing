@@ -34,6 +34,7 @@ export default function Segments() {
           <tr>
             <th>Name</th>
             <th>Description</th>
+            <th>Emails</th>
           </tr>
         </thead>
         <tbody>
@@ -41,6 +42,30 @@ export default function Segments() {
             <tr key={segment._id}>
               <td>{segment.name}</td>
               <td>{segment.description}</td>
+              <td>
+                <div
+                  style={{
+                    maxHeight: "120px",
+                    overflowY: "auto",
+                    minWidth: "180px",
+                    border: "1px solid #eee",
+                    padding: "4px",
+                    background: "#fafafa",
+                  }}
+                >
+                  {segment.emails && segment.emails.length > 0 ? (
+                    <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                      {segment.emails.map((email, idx) => (
+                        <li key={email._id || email}>
+                          {email.name ? `${email.name} (${email.email})` : email.email || email}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span style={{ color: "#888" }}>No emails</span>
+                  )}
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
