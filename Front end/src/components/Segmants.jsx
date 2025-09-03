@@ -26,15 +26,7 @@ export default function Segments() {
     if (selectedSegmentIds.length === 0) return;
     if (!window.confirm("Are you sure you want to delete the selected segments?")) return;
     try {
-      // Option 1: If you have a bulk delete endpoint
-      // await axios.post("http://localhost:3001/segments/delete-many", { ids: selectedSegmentIds });
-
-      // Option 2: Delete one by one
-      await Promise.all(
-        selectedSegmentIds.map(id =>
-          axios.delete(`http://localhost:3001/segments/${id}`)
-        )
-      );
+      await axios.post("http://localhost:3001/segments/delete-many", { ids: selectedSegmentIds });
       setSegments(prev => prev.filter(seg => !selectedSegmentIds.includes(seg._id)));
       setSelectedSegmentIds([]);
     } catch (error) {
