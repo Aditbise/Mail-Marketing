@@ -18,6 +18,7 @@ export default function Segmentsearchupdate({ open, onClose, editingSegment, isE
   const [segmentDescription, setSegmentDescription] = useState("");
   const [selectedEmailIds, setSelectedEmailIds] = useState([]);
   const [segmentEmails, setSegmentEmails] = useState([]);
+  const [emailsToRemove, setEmailsToRemove] = useState([]);
   // Preview old segment data before editing
   const oldSegmentData = isEdit && editingSegment ? {
     name: editingSegment.name,
@@ -28,6 +29,11 @@ export default function Segmentsearchupdate({ open, onClose, editingSegment, isE
   useEffect(() => {
     fetchEmailList();
   }, []);
+  const handleRemoveSelectedEmail = (id) => {
+    setSegmentEmails(prev => prev.filter(email => email._id !== id));
+    setSelectedEmailIds(prev => prev.filter(eid => eid !== id));
+    setEmailsToRemove(prev => [...prev, id]);
+  };
 
   useEffect(() => {
     if (!searching) {
@@ -396,13 +402,62 @@ export default function Segmentsearchupdate({ open, onClose, editingSegment, isE
               {segmentEmails.length === 0 ? (
                 <span style={{ marginLeft: "10px", color: "#e74c3c" }}>None</span>
               ) : (
-                <ul>
-                  {segmentEmails.map(email => (
-                    <li key={email._id}>
-                      {email.name} ({email.email})
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul>
+                    {segmentEmails.map(email => (
+                      <li key={email._id} style={{ display: "flex", alignItems: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={emailsToRemove.includes(email._id)}
+                          onChange={() => {
+                            setEmailsToRemove(prev =>
+                              prev.includes(email._id)
+                                ? prev.filter(id => id !== email._id)
+                                : [...prev, email._id]
+                            );
+                          }}
+                          style={{ marginRight: "8px" }}
+                        />
+                        {email.name} ({email.email})
+                        <button
+                          onClick={() => handleRemoveSelectedEmail(email._id)}
+                          style={{
+                            marginLeft: "10px",
+                            background: "#e74c3c",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "2px 8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {emailsToRemove.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSegmentEmails(prev => prev.filter(email => !emailsToRemove.includes(email._id)));
+                        setSelectedEmailIds(prev => prev.filter(id => !emailsToRemove.includes(id)));
+                        setEmailsToRemove([]);
+                      }}
+                      style={{
+                        marginTop: "10px",
+                        background: "#e74c3c",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "6px 16px",
+                        cursor: "pointer",
+                        fontWeight: "bold"
+                      }}
+                    >
+                      Remove Selected
+                    </button>
+                  )}
+                </>
               )}
             </div>
             <button

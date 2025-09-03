@@ -18,6 +18,12 @@ export default function Segmentsearch({ open, onClose }) {
   const [segmentDescription, setSegmentDescription] = useState("");
   const [selectedEmailIds, setSelectedEmailIds] = useState([]);
   const [segmentEmails, setSegmentEmails] = useState([]);
+  const [emailsToRemove, setEmailsToRemove] = useState([]); // <-- new state for emails to remove
+
+  const handleRemoveSelectedEmail = (id) => {
+    setSegmentEmails((prev) => prev.filter((email) => email._id !== id));
+    setSelectedEmailIds((prev) => prev.filter((eid) => eid !== id));
+  };
 
   useEffect(() => {
     fetchEmailList();
@@ -103,10 +109,10 @@ export default function Segmentsearch({ open, onClose }) {
     }
     try {
       await axios.post("http://localhost:3001/segments", {
-      name: segmentName,
-      description: segmentDescription,
-      contacts: segmentEmails.map((e) => e._id), // <-- use 'contacts'
-    });
+        name: segmentName,
+        description: segmentDescription,
+        contacts: segmentEmails.map((e) => e._id), // <-- use 'contacts'
+      });
       alert("Segment created!");
       setSegmentName("");
       setSegmentDescription("");
@@ -357,13 +363,62 @@ export default function Segmentsearch({ open, onClose }) {
               {segmentEmails.length === 0 ? (
                 <span style={{ marginLeft: "10px", color: "#e74c3c" }}>None</span>
               ) : (
-                <ul>
-                  {segmentEmails.map(email => (
-                    <li key={email._id}>
-                      {email.name} ({email.email})
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul>
+                    {segmentEmails.map(email => (
+                      <li key={email._id} style={{ display: "flex", alignItems: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={emailsToRemove.includes(email._id)}
+                          onChange={() => {
+                            setEmailsToRemove(prev =>
+                              prev.includes(email._id)
+                                ? prev.filter(id => id !== email._id)
+                                : [...prev, email._id]
+                            );
+                          }}
+                          style={{ marginRight: "8px" }}
+                        />
+                        {email.name} ({email.email})
+                        <button
+                          onClick={() => handleRemoveSelectedEmail(email._id)}
+                          style={{
+                            marginLeft: "10px",
+                            background: "#e74c3c",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "4px",
+                            padding: "2px 8px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {emailsToRemove.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSegmentEmails(prev => prev.filter(email => !emailsToRemove.includes(email._id)));
+                        setSelectedEmailIds(prev => prev.filter(id => !emailsToRemove.includes(id)));
+                        setEmailsToRemove([]);
+                      }}
+                      style={{
+                        marginTop: "10px",
+                        background: "#e74c3c",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "6px 16px",
+                        cursor: "pointer",
+                        fontWeight: "bold"
+                      }}
+                    >
+                      Remove Selected
+                    </button>
+                  )}
+                </>
               )}
             </div>
             <button

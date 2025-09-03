@@ -145,3 +145,19 @@ app.put('/segments/:id', async (req, res) => {
         res.status(500).json({ message: 'Error updating segment', error });
     }
 });
+app.delete('/segments/:id', async (req, res) => {
+  try {
+    await SegmentModel.findByIdAndDelete(req.params.id);
+    res.json({ message: "Segment deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting segment", error });
+  }
+});
+app.post('/segments/delete-many', async (req, res) => {
+  try {
+    await SegmentModel.deleteMany({ _id: { $in: req.body.ids } });
+    res.json({ message: 'Selected segments deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting segments', error });
+  }
+});

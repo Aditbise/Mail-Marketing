@@ -7,7 +7,7 @@ export default function Segments() {
   const [segments, setSegments] = useState([]);
   const [show, setShow] = useState(false);
   const [showupdate, setShowUpdate] = useState(false);
-  const [selectedSegmentId, setSelectedSegmentId] = useState(null);
+  const [selectedSegmentIds, setSelectedSegmentIds] = useState([]);
 
   useEffect(() => {
     const fetchSegments = async () => {
@@ -21,23 +21,44 @@ export default function Segments() {
     fetchSegments();
   }, []);
 
-  // Find the selected segment object
-  const selectedSegment = segments.find(seg => seg._id === selectedSegmentId);
+  // Remove segment handler
+  const handleRemoveSegments = async () => {
+    if (selectedSegmentIds.length === 0) return;
+    if (!window.confirm("Are you sure you want to delete the selected segments?")) return;
+    try {
+      // Option 1: If you have a bulk delete endpoint
+      // await axios.post("http://localhost:3001/segments/delete-many", { ids: selectedSegmentIds });
+
+      // Option 2: Delete one by one
+      await Promise.all(
+        selectedSegmentIds.map(id =>
+          axios.delete(`http://localhost:3001/segments/${id}`)
+        )
+      );
+      setSegments(prev => prev.filter(seg => !selectedSegmentIds.includes(seg._id)));
+      setSelectedSegmentIds([]);
+    } catch (error) {
+      alert("Error deleting segments.");
+    }
+  };
+
+  // Find the selected segment objects
+  const selectedSegments = segments.filter(seg => selectedSegmentIds.includes(seg._id));
 
   return (
     <div style={{ padding: "20px" }}>
       <h2>Email Segments</h2>
 
       {/* Open Modal Button */}
-      <button onClick={() => setShow(true)}>Search</button>
+      <button onClick={() => setShow(true)}>Search and Create</button>
       <button
         onClick={() => setShowUpdate(true)}
-        disabled={!selectedSegmentId}
+        disabled={selectedSegmentIds.length !== 1}
         style={{
           marginLeft: "10px",
-          background: selectedSegmentId ? "#007bff" : "#ccc",
+          background: selectedSegmentIds.length === 1 ? "#007bff" : "#ccc",
           color: "#fff",
-          cursor: selectedSegmentId ? "pointer" : "not-allowed",
+          cursor: selectedSegmentIds.length === 1 ? "pointer" : "not-allowed",
           borderRadius: "6px",
           padding: "6px 16px",
           border: "none",
@@ -45,13 +66,28 @@ export default function Segments() {
       >
         Update
       </button>
+      <button
+        onClick={handleRemoveSegments}
+        disabled={selectedSegmentIds.length === 0}
+        style={{
+          marginLeft: "10px",
+          background: selectedSegmentIds.length > 0 ? "#e74c3c" : "#ccc",
+          color: "#fff",
+          cursor: selectedSegmentIds.length > 0 ? "pointer" : "not-allowed",
+          borderRadius: "6px",
+          padding: "6px 16px",
+          border: "none",
+        }}
+      >
+        Remove Selected
+      </button>
 
       {/* Popover modals */}
       <Segmentsearch open={show} onClose={() => setShow(false)} />
       <Segmentsearchupdate
         open={showupdate}
         onClose={() => setShowUpdate(false)}
-        editingSegment={selectedSegment}
+        editingSegment={segments.find(seg => seg._id === selectedSegmentIds[0])}
         isEdit={true}
       />
 
@@ -70,10 +106,15 @@ export default function Segments() {
             <tr key={segment._id}>
               <td>
                 <input
-                  type="radio"
-                  name="segmentSelect"
-                  checked={selectedSegmentId === segment._id}
-                  onChange={() => setSelectedSegmentId(segment._id)}
+                  type="checkbox"
+                  checked={selectedSegmentIds.includes(segment._id)}
+                  onChange={() => {
+                    setSelectedSegmentIds(prev =>
+                      prev.includes(segment._id)
+                        ? prev.filter(id => id !== segment._id)
+                        : [...prev, segment._id]
+                    );
+                  }}
                 />
               </td>
               <td>{segment.name}</td>
@@ -92,7 +133,7 @@ export default function Segments() {
                   {segment.contacts && segment.contacts.length > 0 ? (
                     <ul style={{ margin: 0, paddingLeft: "18px" }}>
                       {segment.contacts.map(email => (
-                        <li key={email._id} style={{ color: "#222", fontWeight: "500" }}>
+                        <li key={email._id} style={{ color: "#7a7a7aff", fontWeight: "500" }}>
                           {email.name} ({email.email})
                         </li>
                       ))}
@@ -109,3 +150,4 @@ export default function Segments() {
     </div>
   );
 }
+
