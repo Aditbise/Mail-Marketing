@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import styles from './styles.css';
 
 export default function EmailLists() {
     const [form, setForm] = useState({
@@ -122,7 +123,7 @@ export default function EmailLists() {
     };
 
     return (
-        <div>
+        <div className={styles.returndiv}>
             <h2>Email Lists</h2>
             <form className="mb-4" onSubmit={handleSubmit}>
                 <input
