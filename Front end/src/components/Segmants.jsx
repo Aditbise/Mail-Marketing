@@ -2,7 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import Segmentsearch from "../Models/Segmentsearch";
 import Segmentsearchupdate from "../Models/Segmentsearchupdate";
-import styles from "./styles.css";
+import "./styles.css";
 
 export default function Segments() {
   const [segments, setSegments] = useState([]);
@@ -39,7 +39,7 @@ export default function Segments() {
   const selectedSegments = segments.filter(seg => selectedSegmentIds.includes(seg._id));
 
   return (
-    <div className={styles.returndiv}>
+    <div className="returndiv">
       <h2>Email Segments</h2>
 
       {/* Open Modal Button */}

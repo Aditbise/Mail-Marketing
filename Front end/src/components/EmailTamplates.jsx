@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./styles.css";
+import "./styles.css";
 export default function EmailTemplates() {
   const [headerelement,setHeaderElements]=useState([]);
   const predefinedHeaderElements = [
@@ -12,7 +12,7 @@ export default function EmailTemplates() {
   };  
   return (
     <div
-      className={styles.returndiv}
+      className="returndiv"
     >
       <h1>Email Templates</h1>
       <div>
