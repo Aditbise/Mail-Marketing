@@ -3,7 +3,7 @@ const mongoose=require("mongoose")
 const cors=require("cors")
 const EmployeeModel=require('./Models/Email.js')
 const EmailListModel=require('./Models/EmailList.js')
-const EmailTamplateModel=require('./Models/EmailTamplate.js')   
+const EmailTemplateModel=require('./Models/EmailTemplate.js')   
 
 
 const app=express()
@@ -165,7 +165,6 @@ app.post('/segments/delete-many', async (req, res) => {
 
 
 //routes for email templates
-const EmailTemplateModel = require('./Models/EmailTemplate.js'); // Update filename if needed
 
 // Create a new template
 app.post('/email-templates', async (req, res) => {
