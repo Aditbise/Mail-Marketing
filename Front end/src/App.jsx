@@ -7,7 +7,7 @@ import Signup from './components/Signup.jsx';
 import Front from './components/Front.jsx';
 import EmailLists from './components/EmailLists.jsx';
 import Segmants from './components/segmants.jsx';
-import EmailTamplates from './components/EmailTemplates.jsx';
+import EmailTemplates from './components/EmailTemplates.jsx';
 
 function shouldShowSignup() {
   const signedIn = localStorage.getItem('userSignedIn');

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import Segmentsearch from "../Models/Segmentsearch";
-import Segmentsearchupdate from "../Models/Segmentsearchupdate";
+import Segmentsearch from "../Models/SegmentSearch";
+import Segmentsearchupdate from "../Models/SegmentSearchUpdate";
 
 export default function Segments() {
   const [segments, setSegments] = useState([]);

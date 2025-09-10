@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import EmailTemplateadd from "..Models/Emailtemplateadd.jsx";
 import axios from "axios";
-
+import EmailTemplateAdd from "../Models/EmailTemplateAdd.jsx";
 export default function EmailTemplates() {
   const [templates, setTemplates] = useState([]);
   const [show, setShow] = useState(false);
@@ -23,7 +22,7 @@ export default function EmailTemplates() {
       <h1>Email Templates</h1>
       <button onClick={() => setShow(true)}>Add Template</button>
       {show && (
-        <EmailTemplateadd open={show} onClose={() => setShow(false)} />
+        <EmailTemplateAdd open={show} onClose={() => setShow(false)} />
       )}
       <div>
         {templates.map((template) => (
