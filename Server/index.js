@@ -3,6 +3,7 @@ const mongoose=require("mongoose")
 const cors=require("cors")
 const EmployeeModel=require('./Models/Email.js')
 const EmailListModel=require('./Models/EmailList.js')
+const EmailTamplateModel=require('./Models/EmailTamplate.js')   
 
 
 const app=express()
@@ -160,4 +161,52 @@ app.post('/segments/delete-many', async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Error deleting segments', error });
   }
+});
+
+
+//routes for email templates
+const EmailTemplateModel = require('./Models/EmailTemplate.js'); // Update filename if needed
+
+// Create a new template
+app.post('/email-templates', async (req, res) => {
+    try {
+        const template = await EmailTemplateModel.create(req.body);
+        res.json(template);
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating template', error });
+    }
+});
+
+// Get all templates
+app.get('/email-templates', async (req, res) => {
+    try {
+        const templates = await EmailTemplateModel.find();
+        res.json(templates);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching templates', error });
+    }
+});
+
+// Update a template
+app.put('/email-templates/:id', async (req, res) => {
+    try {
+        const updated = await EmailTemplateModel.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating template', error });
+    }
+});
+
+// Delete a template
+app.delete('/email-templates/:id', async (req, res) => {
+    try {
+        await EmailTemplateModel.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Template deleted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting template', error });
+    }
 });

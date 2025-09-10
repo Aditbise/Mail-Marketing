@@ -2,7 +2,6 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import Segmentsearch from "../Models/Segmentsearch";
 import Segmentsearchupdate from "../Models/Segmentsearchupdate";
-import "./styles.css";
 
 export default function Segments() {
   const [segments, setSegments] = useState([]);
@@ -113,16 +112,7 @@ export default function Segments() {
               <td>{segment.name}</td>
               <td>{segment.description}</td>
               <td>
-                <div
-                  style={{
-                    maxHeight: "120px",
-                    overflowY: "auto",
-                    minWidth: "180px",
-                    border: "1px solid #eee",
-                    padding: "4px",
-                    background: "#fafafa",
-                  }}
-                >
+                <div className="segmentsearch">
                   {segment.contacts && segment.contacts.length > 0 ? (
                     <ul style={{ margin: 0, paddingLeft: "18px" }}>
                       {segment.contacts.map(email => (

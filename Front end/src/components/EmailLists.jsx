@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import './styles.css';
 
 export default function EmailLists() {
     const [form, setForm] = useState({

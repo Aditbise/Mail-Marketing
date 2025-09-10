@@ -135,12 +135,15 @@ button:focus-visible {
   display: flex;
 }
 .sidebarjsx{
-  width: 250px;
-  height: 100vh;
+  /* width: 250px; */
+  /* height: 100vh; */
   background: #1f1e1e;
   padding: 2rem;
   color: #646cff;
   font-size: 1.1rem;
+  overflow: hidden;
+  width: auto;
+  height: auto;
 }
 body{
   display: flex;
@@ -193,4 +196,24 @@ width: 100%;
 }
 .contactlistpagediv{
   width: 1000px;
+}
+.returndiv {
+    width: 78vw;
+    margin: auto;
+    border: 1px solid #ccc;
+    padding: 20px;
+}
+.emailtemplate-text {
+    width: 1000px;
+    height: 300px;
+    margin-bottom: 20px;
+}
+.segmentsearch {
+  max-height: 120px;
+  overflow-y: auto;
+  min-width: 180px;
+  border: 1px solid #eee;
+  padding: 4px;
+  background: #fafafa;
+  cursor: pointer;
 }
