@@ -25,6 +25,9 @@ export default function EmailTemplates() {
         <EmailTemplateAdd open={show} onClose={() => setShow(false)} />
       )}
       <div>
+            <h2>Template List</h2>
+        </div>
+      <div>
         {templates.map((template) => (
           <div key={template._id} style={{ margin: "16px 0", padding: "12px", border: "1px solid #ccc", borderRadius: "8px" }}>
             <h3>Header: {template.header}</h3>
@@ -33,6 +36,7 @@ export default function EmailTemplates() {
           </div>
         ))}
       </div>
+
     </div>
   );
 }

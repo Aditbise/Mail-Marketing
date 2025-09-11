@@ -1,9 +1,14 @@
 const express=require("express")
 const mongoose=require("mongoose")
 const cors=require("cors")
+const multer=require("multer");
+const upload=multer();
+
+
 const EmployeeModel=require('./Models/Email.js')
 const EmailListModel=require('./Models/EmailList.js')
 const EmailTemplateModel=require('./Models/EmailTemplate.js')   
+const SegmentModel = require('./Models/Segmant.js');
 
 
 const app=express()
@@ -45,7 +50,7 @@ app.post('/signup', (req, res) => {
 app.listen(3001, () => {
     console.log("server is running")
 })
-
+//routse foe email
 app.post('/add-email', async (req, res) => {
     const { email, name, position, company, dateAdded } = req.body;
     try {
@@ -104,7 +109,6 @@ app.put('/email-list/:id', async (req, res) => {
 
 
 //routes for segment
-const SegmentModel = require('./Models/Segmant.js');
 
 app.post('/segments', async (req, res) => {
     try {
@@ -167,45 +171,19 @@ app.post('/segments/delete-many', async (req, res) => {
 //routes for email templates
 
 // Create a new template
-app.post('/email-templates', async (req, res) => {
+app.post('/email-templates', upload.fields([{ name: 'csvData' }, { name: 'pdfData' }]), async (req, res) => {
     try {
-        const template = await EmailTemplateModel.create(req.body);
+        const { FileType, FileName } = req.body;
+        const csvData = req.files['csvData'] ? req.files['csvData'].map(f => f.buffer.toString('utf-8')) : [];
+        const pdfData = req.files['pdfData'] ? req.files['pdfData'].map(f => f.buffer) : [];
+        const template = await EmailTemplateModel.create({
+            FileType,
+            FileName,
+            csvData,
+            pdfData
+        });
         res.json(template);
-    } catch (error) {
-        res.status(500).json({ message: 'Error creating template', error });
-    }
-});
-
-// Get all templates
-app.get('/email-templates', async (req, res) => {
-    try {
-        const templates = await EmailTemplateModel.find();
-        res.json(templates);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching templates', error });
-    }
-});
-
-// Update a template
-app.put('/email-templates/:id', async (req, res) => {
-    try {
-        const updated = await EmailTemplateModel.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        );
-        res.json(updated);
-    } catch (error) {
-        res.status(500).json({ message: 'Error updating template', error });
-    }
-});
-
-// Delete a template
-app.delete('/email-templates/:id', async (req, res) => {
-    try {
-        await EmailTemplateModel.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Template deleted' });
-    } catch (error) {
-        res.status(500).json({ message: 'Error deleting template', error });
+    } catch (err) {
+        res.status(500).json({ message: 'Error creating template', error: err });
     }
 });
