@@ -187,3 +187,48 @@ app.post('/email-templates', upload.fields([{ name: 'csvData' }, { name: 'pdfDat
         res.status(500).json({ message: 'Error creating template', error: err });
     }
 });
+app.get('/email-templates', async (req, res) => {
+    try {
+        const templates = await EmailTemplateModel.find();
+        res.json(templates);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching templates', error });
+    }
+});
+
+// Get a single template by ID
+app.get('/email-templates/:id', async (req, res) => {
+    try {
+        const template = await EmailTemplateModel.findById(req.params.id);
+        res.json(template);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching template', error });
+    }
+});
+
+// Update a template
+app.put('/email-templates/:id', upload.fields([{ name: 'csvData' }, { name: 'pdfData' }]), async (req, res) => {
+    try {
+        const { FileType, FileName } = req.body;
+        const csvData = req.files['csvData'] ? req.files['csvData'].map(f => f.buffer.toString('utf-8')) : [];
+        const pdfData = req.files['pdfData'] ? req.files['pdfData'].map(f => f.buffer) : [];
+        const updated = await EmailTemplateModel.findByIdAndUpdate(
+            req.params.id,
+            { FileType, FileName, csvData, pdfData },
+            { new: true }
+        );
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating template', error });
+    }
+});
+
+// Delete a template
+app.delete('/email-templates/:id', async (req, res) => {
+    try {
+        await EmailTemplateModel.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Template deleted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting template', error });
+    }
+});
