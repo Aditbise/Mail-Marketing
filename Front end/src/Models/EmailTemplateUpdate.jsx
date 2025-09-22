@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { readString } from "react-papaparse";
 
-export default function Emailtemplateadd({ open, onClose, children }) {
+export default function EmailTemplateUpdate({ open, onClose, templateId, children }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
 
   const handleFileUpload = (event) => {
@@ -10,7 +10,11 @@ export default function Emailtemplateadd({ open, onClose, children }) {
     setSelectedFiles(files);
   };
 
-  const handleUpload = async () => {
+  const handleUpdate = async () => {
+    if (!templateId) {
+      alert("No template selected for update!");
+      return;
+    }
     if (selectedFiles.length === 0) {
       alert("No files selected!");
       return;
@@ -23,12 +27,12 @@ export default function Emailtemplateadd({ open, onClose, children }) {
         formData.append("pdfData", file, file.name);
       }
     });
-    // You can also append FileType and FileName arrays if needed
     try {
-      await axios.post("http://localhost:3001/email-templates", formData);
-      alert("Files uploaded successfully!");
+      await axios.put(`http://localhost:3001/email-templates/${templateId}`, formData);
+      alert("Template updated successfully!");
+      onClose();
     } catch (err) {
-      alert("Upload failed!");
+      alert("Update failed!");
       console.error(err);
     }
   };
@@ -92,7 +96,7 @@ export default function Emailtemplateadd({ open, onClose, children }) {
           position: "relative",
         }}
       >
-        <h2>Add CSV or PDF File to continue</h2>
+        <h2>Update CSV or PDF Files for Template</h2>
         <input
           type="file"
           accept=".csv,.pdf"
@@ -113,7 +117,7 @@ export default function Emailtemplateadd({ open, onClose, children }) {
           ✕
         </button>
         {children}
-        <button onClick={handleUpload}>Upload</button>
+        <button onClick={handleUpdate}>Update Template</button>
         <div>
           <h3>Preview</h3>
           {selectedFiles.length === 0 ? (
