@@ -6,8 +6,8 @@ function Sidebar() {
       <ul style={{ listStyle: 'none', padding: 0 }}>
         <li><Link to="/dashboard">Dashboard</Link></li>
         <li><Link to="/Campaigns">Campaigns</Link></li>
-        {/* <li><Link to="/email-lists">Email Lists</Link></li> */}
-        <li><Link to="/Email-templates">Email Templates</Link></li>
+        <li><Link to="/email-builder">Email Builder</Link></li>
+        <li><Link to="/email-templates">Email Templates</Link></li>
         <li><Link to="/reports">Reports</Link></li>
         <li><Link to="/email-lists">Email Lists</Link></li>
         <li><Link to="/segments">Segments</Link></li>

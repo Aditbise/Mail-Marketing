@@ -8,6 +8,7 @@ import Front from './components/Front.jsx';
 import EmailLists from './components/EmailLists.jsx';
 import Segmants from './components/segmants.jsx';
 import EmailTemplates from './components/EmailTemplates.jsx';
+import EmailBuilder from './components/EmailBuilder.jsx';
 
 function shouldShowSignup() {
   const signedIn = localStorage.getItem('userSignedIn');
@@ -46,6 +47,17 @@ function App() {
               <Sidebar />
               <main style={{ flexGrow: 1, padding: '20px' }}>
                 <Campaigns />
+              </main>
+            </div>
+          }
+        />
+        <Route
+          path="/email-builder"
+          element={
+            <div style={{ display: 'flex', minHeight: '100vh' }}>
+              <Sidebar />
+              <main style={{ flexGrow: 1, padding: '20px' }}>
+                <EmailBuilder />
               </main>
             </div>
           }
