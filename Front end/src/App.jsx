@@ -6,9 +6,10 @@ import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import Front from './components/Front.jsx';
 import EmailLists from './components/EmailLists.jsx';
-import Segmants from './components/segmants.jsx';
+import Segmants from './components/segmants.jsx'; // Fix: Should this be 'segments.jsx'?
 import EmailTemplates from './components/EmailTemplates.jsx';
 import EmailBuilder from './components/EmailBuilder.jsx';
+import CompanyInfo from './components/CompanyInfo.jsx';
 
 function shouldShowSignup() {
   const signedIn = localStorage.getItem('userSignedIn');
@@ -20,6 +21,16 @@ function shouldShowSignup() {
   return diffDays > 15;
 }
 
+// Layout component to reduce repetition
+const DashboardLayout = ({ children }) => (
+  <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <Sidebar />
+    <main style={{ flexGrow: 1, padding: '20px' }}>
+      {children}
+    </main>
+  </div>
+);
+
 function App() {
   const showSignup = shouldShowSignup();
 
@@ -29,73 +40,15 @@ function App() {
         <Route path="/" element={<Front />} />
         {showSignup && <Route path="/Signup" element={<Signup />} />}
         <Route path="/Login" element={<Login />} />
-        <Route
-          path="/dashboard"
-          element={
-            <div style={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar />
-              <main style={{ flexGrow: 1, padding: '20px' }}>
-                <Dashboard />
-              </main>
-            </div>
-          }
-        />
-        <Route
-          path="/campaigns"
-          element={
-            <div style={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar />
-              <main style={{ flexGrow: 1, padding: '20px' }}>
-                <Campaigns />
-              </main>
-            </div>
-          }
-        />
-        <Route
-          path="/email-builder"
-          element={
-            <div style={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar />
-              <main style={{ flexGrow: 1, padding: '20px' }}>
-                <EmailBuilder />
-              </main>
-            </div>
-          }
-        />
-        <Route
-          path="/email-lists"
-          element={
-            <div style={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar />
-              <main style={{ flexGrow: 1, padding: '20px' }}>
-                <EmailLists />
-              </main>
-            </div>
-          }
-        />
-        <Route
-          path="/segments"
-          element={
-            <div style={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar />
-              <main style={{ flexGrow: 1, padding: '20px' }}>
-                <Segmants />
-              </main>
-            </div>
-          }
-        />
-        <Route
-          path="/email-templates"
-          element={
-            <div style={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar />
-              <main style={{ flexGrow: 1, padding: '20px' }}>
-                <EmailTemplates />
-              </main>
-            </div>
-          }
-        />
-  
+        
+        {/* Dashboard Routes with Layout */}
+        <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+        <Route path="/campaigns" element={<DashboardLayout><Campaigns /></DashboardLayout>} />
+        <Route path="/email-builder" element={<DashboardLayout><EmailBuilder /></DashboardLayout>} />
+        <Route path="/email-lists" element={<DashboardLayout><EmailLists /></DashboardLayout>} />
+        <Route path="/segments" element={<DashboardLayout><Segmants /></DashboardLayout>} />
+        <Route path="/email-templates" element={<DashboardLayout><EmailTemplates /></DashboardLayout>} />
+        <Route path="/company-info" element={<DashboardLayout><CompanyInfo /></DashboardLayout>} />
       </Routes>
     </BrowserRouter>
   );

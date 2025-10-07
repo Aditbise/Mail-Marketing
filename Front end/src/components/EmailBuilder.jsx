@@ -19,13 +19,15 @@ const CampaignBuilderColumn = ({ emailBuilder, removeFromBuilder, clearBuilder }
     border: isOver ? '2px dashed #2196f3' : '2px solid #ddd',
     borderRadius: '8px',
     minHeight: '400px',
+    maxHeight: '80vh',
     padding: '16px',
-    transition: 'all 0.2s ease'
+    transition: 'all 0.2s ease',
+    overflowY: 'auto'
   };
 
   return (
-    <div className="email-builder-column">
-      <div className="column-header">
+    <div className="email-builder-column" style={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="column-header" style={{ flexShrink: 0, marginBottom: '10px' }}>
         <h3>Campaign Builder</h3>
         <div>
           <button 
@@ -47,9 +49,13 @@ const CampaignBuilderColumn = ({ emailBuilder, removeFromBuilder, clearBuilder }
       
       <div ref={setNodeRef} style={style} className="tasks-container">
         {emailBuilder.length === 0 ? (
-          <div className="empty-state">
-            <p>Drop items here</p>
-            <span>Drag templates and segments from the left columns</span>
+          <div className="empty-state" style={{ 
+            textAlign: 'center', 
+            padding: '40px 20px',
+            color: '#666'
+          }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Drop items here</p>
+            <span style={{ fontSize: '14px' }}>Drag templates, segments, and company info from the columns</span>
           </div>
         ) : (
           emailBuilder.map((item) => (
@@ -58,8 +64,15 @@ const CampaignBuilderColumn = ({ emailBuilder, removeFromBuilder, clearBuilder }
               style={{
                 padding: "12px",
                 margin: "8px 0",
-                backgroundColor: item.type === 'template' ? "#e3f2fd" : "#f3e5f5",
-                border: `2px solid ${item.type === 'template' ? "#2196f3" : "#9c27b0"}`,
+                backgroundColor: 
+                  item.type === 'template' ? "#e3f2fd" : 
+                  item.type === 'segment' ? "#f3e5f5" : 
+                  "#e8f5e8", // Green for company info
+                border: `2px solid ${
+                  item.type === 'template' ? "#2196f3" : 
+                  item.type === 'segment' ? "#9c27b0" : 
+                  "#4caf50"
+                }`,
                 borderRadius: "6px",
                 display: "flex",
                 justifyContent: "space-between",
@@ -95,7 +108,12 @@ const CampaignBuilderColumn = ({ emailBuilder, removeFromBuilder, clearBuilder }
       </div>
 
       {emailBuilder.length > 0 && (
-        <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+        <div style={{ 
+          marginTop: '16px', 
+          display: 'flex', 
+          gap: '8px',
+          flexShrink: 0
+        }}>
           <button
             style={{
               background: '#4caf50',
@@ -131,6 +149,7 @@ const CampaignBuilderColumn = ({ emailBuilder, removeFromBuilder, clearBuilder }
 function EmailBuilder() {
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [emailSegments, setEmailSegments] = useState([]);
+  const [companyInfo, setCompanyInfo] = useState([]);
   const [emailBuilder, setEmailBuilder] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -138,7 +157,7 @@ function EmailBuilder() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-
+        // Fetch email templates
         const templatesResponse = await axios.get('http://localhost:3001/email-templates');
         const templateData = templatesResponse.data.map(template => ({
           id: `template-${template._id}`,
@@ -152,7 +171,7 @@ function EmailBuilder() {
           originalId: template._id
         }));
 
-       
+        // Fetch segments
         try {
           const segmentsResponse = await axios.get('http://localhost:3001/segments');
           const segmentData = segmentsResponse.data.map(segment => ({
@@ -166,6 +185,125 @@ function EmailBuilder() {
         } catch (segmentError) {
           console.log('Segments endpoint not available, using empty array');
           setEmailSegments([]);
+        }
+
+        // Fetch company info
+        try {
+          const companyResponse = await axios.get('http://localhost:3001/company-info');
+          const company = companyResponse.data;
+          
+          // Create draggable company info items
+          const companyItems = [];
+          
+          if (company.companyName) {
+            companyItems.push({
+              id: 'company-name',
+              title: 'Company Name',
+              description: company.companyName,
+              type: 'company-info',
+              field: 'companyName',
+              value: company.companyName
+            });
+          }
+          
+          if (company.email) {
+            companyItems.push({
+              id: 'company-email',
+              title: 'Company Email',
+              description: company.email,
+              type: 'company-info',
+              field: 'email',
+              value: company.email
+            });
+          }
+          
+          if (company.phone) {
+            companyItems.push({
+              id: 'company-phone',
+              title: 'Company Phone',
+              description: company.phone,
+              type: 'company-info',
+              field: 'phone',
+              value: company.phone
+            });
+          }
+          
+          if (company.website) {
+            companyItems.push({
+              id: 'company-website',
+              title: 'Company Website',
+              description: company.website,
+              type: 'company-info',
+              field: 'website',
+              value: company.website
+            });
+          }
+          
+          if (company.address?.street || company.address?.city) {
+            const addressParts = [];
+            if (company.address.street) addressParts.push(company.address.street);
+            if (company.address.city) addressParts.push(company.address.city);
+            if (company.address.state) addressParts.push(company.address.state);
+            
+            companyItems.push({
+              id: 'company-address',
+              title: 'Company Address',
+              description: addressParts.join(', '),
+              type: 'company-info',
+              field: 'address',
+              value: addressParts.join(', ')
+            });
+          }
+          
+          // Social media links
+          if (company.socialLinks?.facebook) {
+            companyItems.push({
+              id: 'company-facebook',
+              title: 'Facebook',
+              description: company.socialLinks.facebook,
+              type: 'company-info',
+              field: 'facebook',
+              value: company.socialLinks.facebook
+            });
+          }
+          
+          if (company.socialLinks?.twitter) {
+            companyItems.push({
+              id: 'company-twitter',
+              title: 'Twitter',
+              description: company.socialLinks.twitter,
+              type: 'company-info',
+              field: 'twitter',
+              value: company.socialLinks.twitter
+            });
+          }
+          
+          if (company.socialLinks?.linkedin) {
+            companyItems.push({
+              id: 'company-linkedin',
+              title: 'LinkedIn',
+              description: company.socialLinks.linkedin,
+              type: 'company-info',
+              field: 'linkedin',
+              value: company.socialLinks.linkedin
+            });
+          }
+          
+          if (company.logo) {
+            companyItems.push({
+              id: 'company-logo',
+              title: 'Company Logo',
+              description: 'Company logo image',
+              type: 'company-info',
+              field: 'logo',
+              value: company.logo
+            });
+          }
+          
+          setCompanyInfo(companyItems);
+        } catch (companyError) {
+          console.log('Company info not available, using empty array');
+          setCompanyInfo([]);
         }
 
         setEmailTemplates(templateData);
@@ -187,10 +325,11 @@ function EmailBuilder() {
     const activeId = active.id;
     const overId = over.id;
 
-    
+    // Find which column the active item is in
     const findColumn = (id) => {
       if (emailTemplates.find(item => item.id === id)) return 'templates';
       if (emailSegments.find(item => item.id === id)) return 'segments';
+      if (companyInfo.find(item => item.id === id)) return 'company';
       if (emailBuilder.find(item => item.id === id)) return 'builder';
       return null;
     };
@@ -200,15 +339,17 @@ function EmailBuilder() {
 
     if (!activeColumn) return;
 
- 
+    // If dragging within the same column
     if (activeColumn === overColumn && activeColumn !== 'builder') {
       const setFunction = 
         activeColumn === 'templates' ? setEmailTemplates :
-        setEmailSegments;
+        activeColumn === 'segments' ? setEmailSegments :
+        setCompanyInfo;
 
       const items = 
         activeColumn === 'templates' ? emailTemplates :
-        emailSegments;
+        activeColumn === 'segments' ? emailSegments :
+        companyInfo;
 
       setFunction((prev) => {
         const oldIndex = prev.findIndex(item => item.id === activeId);
@@ -216,23 +357,24 @@ function EmailBuilder() {
         return arrayMove(prev, oldIndex, newIndex);
       });
     } 
- 
+    // If dragging to campaign builder (drop zone)
     else if (overId === 'campaign-builder-droppable' || overColumn === 'builder') {
       const activeItem = 
         emailTemplates.find(item => item.id === activeId) ||
-        emailSegments.find(item => item.id === activeId);
+        emailSegments.find(item => item.id === activeId) ||
+        companyInfo.find(item => item.id === activeId);
 
       if (activeItem && activeColumn !== 'builder') {
-        
+        // Create a copy for the builder column
         const newItem = {
           ...activeItem,
-          id: `${activeItem.id}-${Date.now()}`, 
+          id: `${activeItem.id}-${Date.now()}`, // Create unique ID for builder
         };
 
         setEmailBuilder(prev => [...prev, newItem]);
       }
     }
-    
+    // If dragging within builder column
     else if (activeColumn === 'builder' && overColumn === 'builder') {
       setEmailBuilder((prev) => {
         const oldIndex = prev.findIndex(item => item.id === activeId);
@@ -242,12 +384,12 @@ function EmailBuilder() {
     }
   };
 
-  
+  // Remove item from builder
   const removeFromBuilder = (itemId) => {
     setEmailBuilder(prev => prev.filter(item => item.id !== itemId));
   };
 
-  
+  // Clear all builder items
   const clearBuilder = () => {
     setEmailBuilder([]);
   };
@@ -271,35 +413,66 @@ function EmailBuilder() {
   }
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '20px', height: '100vh', overflow: 'hidden' }}>
       <h1>Email Campaign Builder</h1>
-      <p>Drag templates and segments to the builder to create your email campaign</p>
+      <p>Drag templates, segments, and company info to the builder to create your email campaign</p>
       
       <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
         <div style={{ 
           display: 'flex', 
-          gap: '20px', 
-          justifyContent: 'space-between',
+          gap: '15px', 
+          height: 'calc(100vh - 120px)', // Account for header space
           marginTop: '20px'
         }}>
-          
-          <div style={{ flex: 1 }}>
-            <EmailBuilderColumn 
-              task={emailTemplates} 
-              title="Email Templates"
-            />
+          {/* Left side - Scrollable columns */}
+          <div style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px',
+            width: '300px', // Fixed width for left columns
+            height: '100%',
+            overflowY: 'auto',
+            paddingRight: '10px'
+          }}>
+            {/* Templates Section */}
+            <div style={{ minHeight: '200px' }}>
+              <h2>Templates</h2>
+              <div  className='email-builder-scrollable'>
+                <EmailBuilderColumn 
+                  task={emailTemplates} 
+                  title=""
+                />
+              </div>
+            </div>
+
+            {/* Segments Section */}
+            <div style={{ minHeight: '200px' }}>
+              <h2>Segments</h2>
+              <div  className='email-builder-scrollable'>
+                <EmailBuilderColumn 
+                  task={emailSegments} 
+                  title=""
+                />
+              </div>
+            </div>
+
+            {/* Personal Info Section */}
+            <div style={{ minHeight: '200px' }}>
+              <h2>Personal Info</h2>
+              <div className='email-builder-scrollable'>
+                <EmailBuilderColumn 
+                  task={companyInfo} 
+                  title=""
+                />
+              </div>
+            </div>
           </div>
 
-          
-          <div style={{ flex: 1 }}>
-            <EmailBuilderColumn 
-              task={emailSegments} 
-              title="Email Segments"
-            />
-          </div>
-
-          
-          <div style={{ flex: 1 }}>
+          {/* Right side - Campaign Builder */}
+          <div style={{ 
+            flex: 1,
+            minWidth: '400px'
+          }}>
             <CampaignBuilderColumn 
               emailBuilder={emailBuilder}
               removeFromBuilder={removeFromBuilder}

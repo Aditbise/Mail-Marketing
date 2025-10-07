@@ -11,11 +11,72 @@
   --sidebar-bg: #1f1e1e;
   --accent-color: #646cff;
   --success-color: #43a87e;
+  
+  /* Unified scrollbar colors */
+  --scrollbar-width: 6px;
+  --scrollbar-track: #f1f1f1;
+  --scrollbar-thumb: #888;
+  --scrollbar-thumb-hover: #555;
+  --scrollbar-track-dark: #2a2a2a;
+  --scrollbar-thumb-dark: #666;
+  --scrollbar-thumb-hover-dark: #888;
 }
 
-/* Base Styles */
+/* UNIFIED SCROLLBAR STYLES - Applied to ALL scrollable elements */
 * {
   box-sizing: border-box;
+  
+  /* Firefox scrollbars */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Webkit scrollbars (Chrome, Safari, Edge) - Applied globally */
+::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+/* Dark mode scrollbars */
+@media (prefers-color-scheme: dark) {
+  * {
+    scrollbar-color: var(--scrollbar-thumb-dark) var(--scrollbar-track-dark);
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-dark);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-dark);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover-dark);
+  }
+  
+  ::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track-dark);
+  }
 }
 
 :root {
@@ -256,18 +317,39 @@ button:focus-visible {
   font-weight: bold;
   font-size: 140%;
   padding: 15px;
-  width: 80%;
+  width: 100%;
   max-width: 500px;
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
+
 .email-builder-task-title {
   width: 100%;
   color: white;
   background: #638d6c;
   padding: 10px;
   border-radius: 4px;
+}
+
+/* Email builder scrollable section - inherits global scrollbar styles */
+.email-builder-scrollable {
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #3d3d3d;
+  border-radius: 8px;
+  padding: 10px;
+  /* Scrollbar styles are inherited from global rules above */
+}
+
+/* Tasks container - inherits global scrollbar styles */
+.tasks-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #3d3d3d;
+  border-radius: 8px;
+  padding: 10px;
 }
 
 /* Media Queries */
@@ -278,6 +360,11 @@ button:focus-visible {
   
   .rdiv {
     margin-top: 10px;
+  }
+  
+  /* Mobile scrollbars - slightly wider for touch */
+  :root {
+    --scrollbar-width: 8px;
   }
 }
 
