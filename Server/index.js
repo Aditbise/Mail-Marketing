@@ -10,6 +10,7 @@ const EmailListModel = require('./Models/EmailList.js');
 const EmailTemplateModel = require('./Models/EmailTemplate.js');   
 const SegmentModel = require('./Models/Segmant.js');
 const CompanyInfo = require('./Models/CompanyInfo');
+const EmailBody = require('./Models/EmailBody'); // Add this line
 
 const app = express();
 app.use(express.json());
@@ -344,28 +345,22 @@ app.get('/company-info/logo', async (req, res) => {
         if (!company || !company.logo) {
             return res.status(404).json({ message: 'Logo not found' });
         }
-        
-        // Redirect to the actual file
         res.redirect(company.logo);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching logo', error });
     }
 });
 
-// Delete company logo
 app.delete('/company-info/logo', async (req, res) => {
     try {
         const company = await CompanyInfo.findOne();
         if (company && company.logo) {
-            // Delete file from filesystem
             if (company.logo.startsWith('/uploads/')) {
                 const logoPath = path.join(__dirname, company.logo);
                 if (fs.existsSync(logoPath)) {
                     fs.unlinkSync(logoPath);
                 }
             }
-            
-            // Remove from database
             company.logo = '';
             company.updatedAt = new Date();
             await company.save();
@@ -373,6 +368,93 @@ app.delete('/company-info/logo', async (req, res) => {
         res.json({ message: 'Logo deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting logo', error });
+    }
+});
+
+// ===== EMAIL BODY ROUTES ===== (Updated for new schema)
+
+// CREATE - Add new email body
+app.post('/email-bodies', async (req, res) => {
+    try {
+        const { Name, bodyContent } = req.body;
+        
+        if (!Name || !bodyContent) {
+            return res.status(400).json({ message: 'Name and body content are required' });
+        }
+        
+        const emailBody = new EmailBody({ 
+            Name,
+            bodyContent,
+            updatedAt: Date.now()
+        });
+        await emailBody.save();
+        
+        res.json({ message: 'Email body created', emailBody });
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating email body', error });
+    }
+});
+
+// READ - Get all email bodies
+app.get('/email-bodies', async (req, res) => {
+    try {
+        const emailBodies = await EmailBody.find().sort({ createdAt: -1 });
+        res.json(emailBodies);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching email bodies', error });
+    }
+});
+
+// READ - Get single email body
+app.get('/email-bodies/:id', async (req, res) => {
+    try {
+        const emailBody = await EmailBody.findById(req.params.id);
+        if (!emailBody) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+        res.json(emailBody);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching email body', error });
+    }
+});
+
+// UPDATE - Update email body
+app.put('/email-bodies/:id', async (req, res) => {
+    try {
+        const { Name, bodyContent } = req.body;
+        
+        const emailBody = await EmailBody.findByIdAndUpdate(
+            req.params.id,
+            { 
+                Name,
+                bodyContent,
+                updatedAt: Date.now()
+            },
+            { new: true }
+        );
+        
+        if (!emailBody) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+        
+        res.json({ message: 'Email body updated', emailBody });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating email body', error });
+    }
+});
+
+// DELETE - Delete email body
+app.delete('/email-bodies/:id', async (req, res) => {
+    try {
+        const emailBody = await EmailBody.findByIdAndDelete(req.params.id);
+        
+        if (!emailBody) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+        
+        res.json({ message: 'Email body deleted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting email body', error });
     }
 });
 

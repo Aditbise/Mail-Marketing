@@ -6,10 +6,11 @@ import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import Front from './components/Front.jsx';
 import EmailLists from './components/EmailLists.jsx';
-import Segmants from './components/segmants.jsx'; // Fix: Should this be 'segments.jsx'?
+import Segmants from './components/segmants.jsx';
 import EmailTemplates from './components/EmailTemplates.jsx';
 import EmailBuilder from './components/EmailBuilder.jsx';
 import CompanyInfo from './components/CompanyInfo.jsx';
+import EmailBodyEditor from './components/EmailBodyEditor.jsx'; // Add this import
 
 function shouldShowSignup() {
   const signedIn = localStorage.getItem('userSignedIn');
@@ -45,6 +46,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
         <Route path="/campaigns" element={<DashboardLayout><Campaigns /></DashboardLayout>} />
         <Route path="/email-builder" element={<DashboardLayout><EmailBuilder /></DashboardLayout>} />
+        <Route path="/email-body-editor" element={<DashboardLayout><EmailBodyEditor /></DashboardLayout>} /> {/* Add this route */}
         <Route path="/email-lists" element={<DashboardLayout><EmailLists /></DashboardLayout>} />
         <Route path="/segments" element={<DashboardLayout><Segmants /></DashboardLayout>} />
         <Route path="/email-templates" element={<DashboardLayout><EmailTemplates /></DashboardLayout>} />
