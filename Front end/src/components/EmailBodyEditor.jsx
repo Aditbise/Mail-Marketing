@@ -44,7 +44,7 @@ export default function EmailBodyEditor() {
       setError('');
     } catch (error) {
       console.error('Error fetching email bodies:', error);
-      setError('Failed to load email bodies');
+      setError('Failed to load email bodies: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -61,14 +61,14 @@ export default function EmailBodyEditor() {
     try {
       if (editingId) {
         // UPDATE existing
-        await axios.put(`http://localhost:3001/email-bodies/${editingId}`, {
+        const response = await axios.put(`http://localhost:3001/email-bodies/${editingId}`, {
           Name: currentName.trim(),
           bodyContent: currentBody.trim()
         });
         alert('Email body updated successfully!');
       } else {
         // CREATE new
-        await axios.post('http://localhost:3001/email-bodies', {
+        const response = await axios.post('http://localhost:3001/email-bodies', {
           Name: currentName.trim(),
           bodyContent: currentBody.trim()
         });
@@ -82,7 +82,7 @@ export default function EmailBodyEditor() {
       fetchEmailBodies();
     } catch (error) {
       console.error('Error saving email body:', error);
-      alert('Failed to save email body');
+      alert('Failed to save email body: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }

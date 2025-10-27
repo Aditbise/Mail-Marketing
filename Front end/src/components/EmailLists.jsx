@@ -179,7 +179,7 @@ export default function EmailLists() {
             display: 'flex', 
             flexDirection: 'column' 
         }}>
-            <h2 style={{ marginBottom: '20px', color: '#333' }}>Email Lists</h2>
+            <h2 style={{ marginBottom: '20px', color: 'white' }}>Email Lists</h2>
             
             {/* Add Email Form */}
             <div style={{ marginBottom: '20px', flexShrink: 0 }}>
@@ -200,15 +200,24 @@ export default function EmailLists() {
                             borderRadius: '4px',
                             fontSize: '14px',
                             minWidth: '200px',
-                            outline: 'none'
+                            outline: 'none',
+                            backgroundColor: 'white',
+                            color: '#333',
+                            fontWeight: '500'
                         }}
                         name="email"
                         placeholder="Email"
                         value={form.email}
                         onChange={handleChange}
                         required
-                        onFocus={(e) => e.target.style.borderColor = '#4caf50'}
-                        onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                        onFocus={(e) => {
+                            e.target.style.borderColor = '#4caf50';
+                            e.target.style.backgroundColor = '#f9fff9';
+                        }}
+                        onBlur={(e) => {
+                            e.target.style.borderColor = '#ddd';
+                            e.target.style.backgroundColor = 'white';
+                        }}
                     />
                     <input
                         style={{
@@ -217,15 +226,24 @@ export default function EmailLists() {
                             borderRadius: '4px',
                             fontSize: '14px',
                             minWidth: '150px',
-                            outline: 'none'
+                            outline: 'none',
+                            backgroundColor: 'white',
+                            color: '#333',
+                            fontWeight: '500'
                         }}
                         name="name"
                         placeholder="Name"
                         value={form.name}
                         onChange={handleChange}
                         required
-                        onFocus={(e) => e.target.style.borderColor = '#4caf50'}
-                        onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                        onFocus={(e) => {
+                            e.target.style.borderColor = '#4caf50';
+                            e.target.style.backgroundColor = '#f9fff9';
+                        }}
+                        onBlur={(e) => {
+                            e.target.style.borderColor = '#ddd';
+                            e.target.style.backgroundColor = 'white';
+                        }}
                     />
                     <input
                         style={{
@@ -234,14 +252,23 @@ export default function EmailLists() {
                             borderRadius: '4px',
                             fontSize: '14px',
                             minWidth: '150px',
-                            outline: 'none'
+                            outline: 'none',
+                            backgroundColor: 'white',
+                            color: '#333',
+                            fontWeight: '500'
                         }}
                         name="position"
                         placeholder="Position"
                         value={form.position}
                         onChange={handleChange}
-                        onFocus={(e) => e.target.style.borderColor = '#4caf50'}
-                        onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                        onFocus={(e) => {
+                            e.target.style.borderColor = '#4caf50';
+                            e.target.style.backgroundColor = '#f9fff9';
+                        }}
+                        onBlur={(e) => {
+                            e.target.style.borderColor = '#ddd';
+                            e.target.style.backgroundColor = 'white';
+                        }}
                     />
                     <input
                         style={{
@@ -250,14 +277,23 @@ export default function EmailLists() {
                             borderRadius: '4px',
                             fontSize: '14px',
                             minWidth: '150px',
-                            outline: 'none'
+                            outline: 'none',
+                            backgroundColor: 'white',
+                            color: '#333',
+                            fontWeight: '500'
                         }}
                         name="company"
                         placeholder="Company"
                         value={form.company}
                         onChange={handleChange}
-                        onFocus={(e) => e.target.style.borderColor = '#4caf50'}
-                        onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                        onFocus={(e) => {
+                            e.target.style.borderColor = '#4caf50';
+                            e.target.style.backgroundColor = '#f9fff9';
+                        }}
+                        onBlur={(e) => {
+                            e.target.style.borderColor = '#ddd';
+                            e.target.style.backgroundColor = 'white';
+                        }}
                     />
                     <button 
                         style={{
@@ -358,7 +394,7 @@ export default function EmailLists() {
                     overflowY: 'auto',
                     border: '1px solid #838383ff',
                     borderRadius: '8px',
-                    backgroundColor: '#505050ff'  // Light gray instead of white
+                    backgroundColor: 'white'  // Changed back to white for better visibility
                 }}>
                     {loading && (
                         <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
@@ -414,8 +450,8 @@ export default function EmailLists() {
                             fontSize: '14px'
                         }}>
                             <thead style={{ 
-                                backgroundColor: '#535353ff',  // Darker gray header
-                                borderBottom: '2px solid #808080ff',
+                                backgroundColor: '#f8f9fa',  // Light gray header for better contrast
+                                borderBottom: '2px solid #dee2e6',
                                 position: 'sticky',
                                 top: 0,
                                 zIndex: 10
@@ -450,7 +486,7 @@ export default function EmailLists() {
                                                     ? '#fff3e0' 
                                                     : hasEmptyFields 
                                                         ? '#ffebee' 
-                                                        : index % 2 === 0 ? '#f5f5f5' : '#e8e8e8'  // Alternating grays
+                                                        : index % 2 === 0 ? '#f8f9fa' : 'white'  // Light gray and white alternating
                                             }}
                                         >
                                             <td style={{ padding: '12px 8px' }}>
