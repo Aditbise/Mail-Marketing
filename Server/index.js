@@ -56,6 +56,56 @@ const upload = multer({
 // For templates (memory storage)
 const memoryUpload = multer({ storage: multer.memoryStorage() });
 
+// Create uploads directory if it doesn't exist
+const emailBodiesDir = './uploads/email-bodies';
+if (!fs.existsSync(emailBodiesDir)) {
+    fs.mkdirSync(emailBodiesDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const emailBodyStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, emailBodiesDir);
+    },
+    filename: function (req, file, cb) {
+        // Create unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    // Allow PDFs, images, text files, Word docs, etc.
+    const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'text/plain',
+        'text/html',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Please upload PDF, image, text, or Office documents.'), false);
+    }
+};
+
+const uploadEmailBodyFiles = multer({ 
+    storage: emailBodyStorage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB limit
+    }
+});
+
 mongoose.connect("mongodb://localhost:27017/email");
 
 // ===== AUTH ROUTES =====
@@ -374,24 +424,48 @@ app.delete('/company-info/logo', async (req, res) => {
 // ===== EMAIL BODY ROUTES ===== (Updated for new schema)
 
 // CREATE - Add new email body
-app.post('/email-bodies', async (req, res) => {
+app.post('/email-bodies', uploadEmailBodyFiles.array('attachments', 10), async (req, res) => {
     try {
         const { Name, bodyContent } = req.body;
         
-        if (!Name || !bodyContent) {
-            return res.status(400).json({ message: 'Name and body content are required' });
+        if (!Name) {
+            return res.status(400).json({ message: 'Name is required' });
         }
-        
+
+        // Handle attachments
+        const attachments = req.files ? req.files.map(file => ({
+            filename: file.filename,
+            originalName: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: file.path
+        })) : [];
+
+        // Determine content type
+        let contentType = 'text';
+        if (attachments.length > 0 && bodyContent) {
+            contentType = 'mixed';
+        } else if (attachments.length > 0) {
+            contentType = 'file';
+        }
+
         const emailBody = new EmailBody({ 
             Name,
-            bodyContent,
+            bodyContent: bodyContent || '',
+            contentType: contentType,
+            attachments: attachments,
             updatedAt: Date.now()
         });
+        
         await emailBody.save();
         
-        res.json({ message: 'Email body created', emailBody });
+        res.json({ 
+            message: 'Email body created successfully', 
+            emailBody 
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Error creating email body', error });
+        console.error('Error creating email body:', error);
+        res.status(500).json({ message: 'Error creating email body', error: error.message });
     }
 });
 
@@ -419,27 +493,66 @@ app.get('/email-bodies/:id', async (req, res) => {
 });
 
 // UPDATE - Update email body
-app.put('/email-bodies/:id', async (req, res) => {
+app.put('/email-bodies/:id', uploadEmailBodyFiles.array('attachments', 10), async (req, res) => {
     try {
-        const { Name, bodyContent } = req.body;
+        const { Name, bodyContent, keepExistingFiles } = req.body;
         
+        const existingBody = await EmailBody.findById(req.params.id);
+        if (!existingBody) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+
+        // Handle new attachments
+        const newAttachments = req.files ? req.files.map(file => ({
+            filename: file.filename,
+            originalName: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: file.path
+        })) : [];
+
+        // Decide which attachments to keep
+        let finalAttachments = [];
+        if (keepExistingFiles === 'true') {
+            finalAttachments = [...existingBody.attachments, ...newAttachments];
+        } else {
+            // Delete old files
+            existingBody.attachments.forEach(attachment => {
+                if (fs.existsSync(attachment.path)) {
+                    fs.unlinkSync(attachment.path);
+                }
+            });
+            finalAttachments = newAttachments;
+        }
+
+        // Determine content type
+        const finalBodyContent = bodyContent !== undefined ? bodyContent : existingBody.bodyContent;
+        let contentType = 'text';
+        if (finalAttachments.length > 0 && finalBodyContent) {
+            contentType = 'mixed';
+        } else if (finalAttachments.length > 0) {
+            contentType = 'file';
+        }
+
         const emailBody = await EmailBody.findByIdAndUpdate(
             req.params.id,
             { 
-                Name,
-                bodyContent,
+                Name: Name || existingBody.Name,
+                bodyContent: finalBodyContent,
+                contentType: contentType,
+                attachments: finalAttachments,
                 updatedAt: Date.now()
             },
             { new: true }
         );
         
-        if (!emailBody) {
-            return res.status(404).json({ message: 'Email body not found' });
-        }
-        
-        res.json({ message: 'Email body updated', emailBody });
+        res.json({ 
+            message: 'Email body updated successfully', 
+            emailBody 
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Error updating email body', error });
+        console.error('Error updating email body:', error);
+        res.status(500).json({ message: 'Error updating email body', error: error.message });
     }
 });
 
@@ -455,6 +568,57 @@ app.delete('/email-bodies/:id', async (req, res) => {
         res.json({ message: 'Email body deleted' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting email body', error });
+    }
+});
+
+// Serve uploaded files
+app.get('/uploads/email-bodies/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filepath = path.join(__dirname, 'uploads', 'email-bodies', filename);
+    
+    if (fs.existsSync(filepath)) {
+        res.sendFile(path.resolve(filepath));
+    } else {
+        res.status(404).json({ message: 'File not found' });
+    }
+});
+
+// Delete specific attachment
+app.delete('/email-bodies/:id/attachments/:attachmentId', async (req, res) => {
+    try {
+        const emailBody = await EmailBody.findById(req.params.id);
+        if (!emailBody) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+
+        const attachment = emailBody.attachments.id(req.params.attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ message: 'Attachment not found' });
+        }
+
+        // Delete physical file
+        if (fs.existsSync(attachment.path)) {
+            fs.unlinkSync(attachment.path);
+        }
+
+        // Remove from database
+        emailBody.attachments.pull(req.params.attachmentId);
+        
+        // Update content type
+        const hasContent = emailBody.bodyContent && emailBody.bodyContent.trim();
+        if (emailBody.attachments.length === 0) {
+            emailBody.contentType = 'text';
+        } else if (hasContent) {
+            emailBody.contentType = 'mixed';
+        } else {
+            emailBody.contentType = 'file';
+        }
+        
+        await emailBody.save();
+
+        res.json({ message: 'Attachment deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting attachment', error: error.message });
     }
 });
 

@@ -19,7 +19,7 @@ function Sidebar() {
               <li><Link to="/email-lists">Email Lists</Link></li>
               <li><Link to="/email-templates">Email Templates</Link></li>
               <li><Link to="/segments">Segments</Link></li>
-              <li><Link to="/email-builder">Email Builder</Link></li>
+              {/* <li><Link to="/email-builder">Email Builder</Link></li> */}
               <li><Link to="/email-body-editor">Email Body Editor</Link></li>
 
             </div>

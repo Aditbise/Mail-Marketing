@@ -10,6 +10,10 @@ export default function EmailBodyEditor() {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [keepExistingFiles, setKeepExistingFiles] = useState(false);
+  const [expandedBodies, setExpandedBodies] = useState({});
 
   // Fetch all email bodies when component loads
   useEffect(() => {
@@ -127,6 +131,99 @@ export default function EmailBodyEditor() {
     setSearchQuery('');
   };
 
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(prevFiles => [...prevFiles, ...files]);
+  };
+
+  // Remove selected file
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+  };
+
+  // Upload files
+  const uploadFiles = async () => {
+    if (selectedFiles.length === 0) {
+      alert('No files selected for upload');
+      return;
+    }
+
+    setLoading(true);
+    setUploadProgress(0);
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach(file => {
+        formData.append('files', file);
+      });
+      
+      // If editing, include the email body ID
+      if (editingId) {
+        formData.append('emailBodyId', editingId);
+      }
+      
+      const response = await axios.post('http://localhost:3001/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const { loaded, total } = progressEvent;
+          const percent = Math.floor((loaded * 100) / total);
+          setUploadProgress(percent);
+        }
+      });
+      
+      alert('Files uploaded successfully!');
+      
+      // If we just created a new body, refetch all bodies
+      if (!editingId) {
+        fetchEmailBodies();
+      }
+      
+      // Reset file input
+      setSelectedFiles([]);
+      setUploadProgress(0);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert('Failed to upload files');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // DELETE attachment
+  const deleteAttachment = async (emailBodyId, attachmentId) => {
+    if (window.confirm('Are you sure you want to delete this attachment?')) {
+      setLoading(true);
+      try {
+        await axios.delete(`http://localhost:3001/attachments/${attachmentId}`, {
+          data: { emailBodyId }
+        });
+        alert('Attachment deleted successfully!');
+        fetchEmailBodies();
+      } catch (error) {
+        console.error('Error deleting attachment:', error);
+        alert('Failed to delete attachment');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Cancel file upload
+  const cancelUpload = () => {
+    setSelectedFiles([]);
+    setUploadProgress(0);
+  };
+
+  // Toggle content expansion
+  const toggleBodyExpansion = (emailBodyId) => {
+    setExpandedBodies(prev => ({
+      ...prev,
+      [emailBodyId]: !prev[emailBodyId]
+    }));
+  };
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <h1>Email Body Editor</h1>
@@ -236,6 +333,119 @@ export default function EmailBodyEditor() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* File Upload Section */}
+      <div style={{ marginBottom: '10px' }}>
+        <label style={{ 
+            display: 'block', 
+            marginBottom: '8px', 
+            fontWeight: 'bold',
+            color: '#333'
+        }}>
+            Upload Files:
+            <span style={{ 
+              fontSize: '12px', 
+              fontWeight: 'normal', 
+              color: '#666',
+              display: 'block',
+              marginTop: '2px'
+            }}>
+              Supported: PDF, Images (JPG, PNG, GIF), Text files, Word docs, Excel files (Max 50MB each)
+            </span>
+        </label>
+        
+        <input
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.txt,.html,.doc,.docx,.xls,.xlsx"
+            onChange={handleFileSelect}
+            style={{
+                width: '100%',
+                padding: '8px',
+                border: '2px solid #ddd',
+                borderRadius: '4px',
+                backgroundColor: 'white',
+                cursor: 'pointer'
+            }}
+        />
+        
+        {/* Rest of the file upload UI remains the same */}
+        {selectedFiles.length > 0 && (
+            <div style={{ marginTop: '10px' }}>
+                <h5 style={{ margin: '0 0 8px 0', color: '#333' }}>Selected Files:</h5>
+                {selectedFiles.map((file, index) => (
+                    <div key={index} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px',
+                        backgroundColor: '#f0f8ff',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        marginBottom: '4px'
+                    }}>
+                        <span style={{ fontSize: '14px' }}>
+                            📎 {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => removeSelectedFile(index)}
+                            style={{
+                                backgroundColor: '#f44336',
+                                color: 'white',
+                                border: 'none',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                ))}
+            </div>
+        )}
+        
+        {editingId && (
+            <div style={{ marginTop: '10px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', fontSize: '14px' }}>
+                    <input
+                        type="checkbox"
+                        checked={keepExistingFiles}
+                        onChange={(e) => setKeepExistingFiles(e.target.checked)}
+                        style={{ marginRight: '8px' }}
+                    />
+                    Keep existing files when uploading new ones
+                </label>
+            </div>
+        )}
+        
+        {uploadProgress > 0 && uploadProgress < 100 && (
+            <div style={{ marginTop: '10px' }}>
+                <div style={{ 
+                    width: '100%', 
+                    backgroundColor: '#f0f0f0', 
+                    borderRadius: '4px',
+                    overflow: 'hidden'
+                }}>
+                    <div style={{
+                        width: `${uploadProgress}%`,
+                        backgroundColor: '#4caf50',
+                        height: '20px',
+                        transition: 'width 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '12px'
+                    }}>
+                        {uploadProgress}%
+                    </div>
+                </div>
+            </div>
+        )}
       </div>
 
       {/* Email Bodies List Section */}
@@ -418,61 +628,213 @@ export default function EmailBodyEditor() {
                           )}
                         </h4>
                         
+                        {/* Content and Attachments Display */}
                         <div style={{
                           backgroundColor: hasEmptyContent ? '#ffebee' : '#f8f9fa',
                           padding: '10px',
                           borderRadius: '4px',
                           border: hasEmptyContent ? '1px solid #f44336' : '1px solid #e9ecef',
-                          maxHeight: '100px',
-                          overflow: 'hidden',
+                          maxHeight: expandedBodies[emailBody._id] ? 'none' : '150px',
+                          overflow: expandedBodies[emailBody._id] ? 'visible' : 'auto',
                           position: 'relative'
                         }}>
-                          <p style={{ 
-                            margin: 0, 
-                            color: hasEmptyContent ? '#f44336' : '#555',
-                            fontSize: '14px',
-                            lineHeight: '1.4',
-                            fontStyle: hasEmptyContent ? 'italic' : 'normal'
-                          }}>
-                            {/* Display content with highlighting or fallback */}
-                            {emailBody.bodyContent && emailBody.bodyContent.trim() !== '' ? (
-                              searchQuery ? (
-                                <span dangerouslySetInnerHTML={{
-                                  __html: (emailBody.bodyContent.length > 200 
-                                    ? emailBody.bodyContent.substring(0, 200) + '...' 
-                                    : emailBody.bodyContent
-                                  ).replace(
-                                    new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
-                                    '<mark style="background: yellow; padding: 2px 4px; border-radius: 2px;">$1</mark>'
-                                  )
-                                }} />
-                              ) : (
-                                emailBody.bodyContent.length > 200 
-                                  ? emailBody.bodyContent.substring(0, 200) + '...' 
-                                  : emailBody.bodyContent
-                              )
-                            ) : (
-                              <span style={{ color: '#f44336' }}>
-                                ⚠️ [Empty Content - No body text available]
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        
-                        <small style={{ color: '#666', marginTop: '8px', display: 'block' }}>
-                          Created: {emailBody.createdAt ? new Date(emailBody.createdAt).toLocaleDateString() : 'Unknown'}
-                          {emailBody.updatedAt && emailBody.createdAt && emailBody.updatedAt !== emailBody.createdAt && (
-                            <span> • Updated: {new Date(emailBody.updatedAt).toLocaleDateString()}</span>
+                          {/* Text Content */}
+                          {emailBody.bodyContent && emailBody.bodyContent.trim() !== '' && (
+                            <div style={{ marginBottom: emailBody.attachments?.length > 0 ? '10px' : '0' }}>
+                              <p style={{ 
+                                margin: 0, 
+                                color: '#555',
+                                fontSize: '14px',
+                                lineHeight: '1.4'
+                              }}>
+                                {(() => {
+                                  const isExpanded = expandedBodies[emailBody._id];
+                                  const shouldTruncate = emailBody.bodyContent.length > 200;
+                                  const displayContent = isExpanded || !shouldTruncate 
+                                    ? emailBody.bodyContent 
+                                    : emailBody.bodyContent.substring(0, 200) + '...';
+
+                                  if (searchQuery) {
+                                    return (
+                                      <span dangerouslySetInnerHTML={{
+                                        __html: displayContent.replace(
+                                          new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+                                          '<mark style="background: yellow; padding: 2px 4px; border-radius: 2px;">$1</mark>'
+                                        )
+                                      }} />
+                                    );
+                                  } else {
+                                    return displayContent;
+                                  }
+                                })()}
+                              </p>
+                              
+                              {/* Show expand/collapse button if content is long */}
+                              {emailBody.bodyContent.length > 200 && (
+                                <button
+                                  onClick={() => toggleBodyExpansion(emailBody._id)}
+                                  style={{
+                                    backgroundColor: 'transparent',
+                                    border: '1px solid #2196f3',
+                                    color: '#2196f3',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    marginTop: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.backgroundColor = '#e3f2fd';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.backgroundColor = 'transparent';
+                                  }}
+                                >
+                                  {expandedBodies[emailBody._id] ? (
+                                    <>
+                                      📄 Show Less
+                                      <span style={{ fontSize: '10px' }}>▲</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      📄 Show Full Content ({Math.ceil((emailBody.bodyContent.length - 200) / 100)} more lines)
+                                      <span style={{ fontSize: '10px' }}>▼</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           )}
-                          {hasIssues && (
-                            <span style={{ color: '#f44336', fontWeight: 'bold', marginLeft: '10px' }}>
-                              • Needs Attention
+                          
+                          {/* Attachments */}
+                          {emailBody.attachments && emailBody.attachments.length > 0 && (
+                            <div style={{
+                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                              padding: '8px',
+                              borderRadius: '4px',
+                              border: '1px solid rgba(33, 150, 243, 0.3)'
+                            }}>
+                              <div style={{ 
+                                fontSize: '12px', 
+                                fontWeight: 'bold', 
+                                color: '#1976d2',
+                                marginBottom: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                📎 {emailBody.attachments.length} file{emailBody.attachments.length > 1 ? 's' : ''} attached
+                              </div>
+                              
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {emailBody.attachments.map((attachment, idx) => {
+                                  // Get file icon based on type
+                                  const getFileIcon = (mimetype) => {
+                                    if (mimetype === 'application/pdf') return '📄';
+                                    if (mimetype.startsWith('image/')) return '🖼️';
+                                    if (mimetype.includes('word')) return '📝';
+                                    if (mimetype.includes('excel') || mimetype.includes('sheet')) return '📊';
+                                    return '📎';
+                                  };
+
+                                  return (
+                                    <div key={idx} style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      backgroundColor: 'white',
+                                      padding: '4px 6px',
+                                      borderRadius: '3px',
+                                      border: '1px solid #ddd',
+                                      fontSize: '11px'
+                                    }}>
+                                      <span>{getFileIcon(attachment.mimetype)}</span>
+                                      <span style={{ 
+                                        maxWidth: '100px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        {attachment.originalName}
+                                      </span>
+                                      <span style={{ color: '#666' }}>
+                                        ({(attachment.size / 1024 / 1024).toFixed(1)}MB)
+                                      </span>
+                                      
+                                      <div style={{ display: 'flex', gap: '2px', marginLeft: '4px' }}>
+                                        <a
+                                          href={`http://localhost:3001/uploads/email-bodies/${attachment.filename}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{
+                                            color: '#2196f3',
+                                            textDecoration: 'none',
+                                            fontSize: '10px',
+                                            padding: '2px 4px',
+                                            backgroundColor: '#e3f2fd',
+                                            borderRadius: '2px'
+                                          }}
+                                          title="View file"
+                                        >
+                                          View
+                                        </a>
+                                        <button
+                                          onClick={() => deleteAttachment(emailBody._id, attachment._id)}
+                                          style={{
+                                            backgroundColor: '#ffebee',
+                                            border: 'none',
+                                            color: '#f44336',
+                                            cursor: 'pointer',
+                                            fontSize: '10px',
+                                            padding: '2px 4px',
+                                            borderRadius: '2px'
+                                          }}
+                                          title="Delete attachment"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Empty state */}
+                          {(!emailBody.bodyContent || emailBody.bodyContent.trim() === '') && 
+                           (!emailBody.attachments || emailBody.attachments.length === 0) && (
+                            <span style={{ color: '#f44336', fontStyle: 'italic' }}>
+                              ⚠️ [No content or files]
                             </span>
                           )}
-                        </small>
+                        </div>
                       </div>
                       
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginLeft: '15px' }}>
+                        {/* Preview Button - only show if there's content to preview */}
+                        {emailBody.bodyContent && emailBody.bodyContent.trim() !== '' && (
+                          <button
+                            onClick={() => toggleBodyExpansion(emailBody._id)}
+                            style={{
+                              backgroundColor: expandedBodies[emailBody._id] ? '#9e9e9e' : '#673ab7',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '6px 12px',
+                              fontSize: '14px',
+                              cursor: 'pointer',
+                              minWidth: '70px'
+                            }}
+                            title={expandedBodies[emailBody._id] ? 'Collapse content' : 'Expand full content'}
+                          >
+                            {expandedBodies[emailBody._id] ? 'Collapse' : 'Preview'}
+                          </button>
+                        )}
+                        
                         <button
                           onClick={() => editEmailBody(emailBody)}
                           style={{
