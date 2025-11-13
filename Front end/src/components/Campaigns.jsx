@@ -14,29 +14,20 @@ export default function Campaigns() {
   const [selectedEmails, setSelectedEmails] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch data on component mount and load saved campaigns
+  // Fetch data on component mount
   useEffect(() => {
     fetchEmailBodies();
     fetchEmailLists();
-    loadSavedCampaigns();
+    fetchCampaigns();
   }, []);
 
-  // Save campaigns to localStorage whenever campaigns change
-  useEffect(() => {
-    if (campaigns.length > 0) {
-      localStorage.setItem('emailCampaigns', JSON.stringify(campaigns));
-    }
-  }, [campaigns]);
-
-  const loadSavedCampaigns = () => {
+  const fetchCampaigns = async () => {
     try {
-      const savedCampaigns = localStorage.getItem('emailCampaigns');
-      if (savedCampaigns) {
-        const parsedCampaigns = JSON.parse(savedCampaigns);
-        setCampaigns(parsedCampaigns);
-      }
+      const response = await axios.get('http://localhost:3001/campaigns');
+      setCampaigns(response.data);
     } catch (error) {
-      console.error('Error loading saved campaigns:', error);
+      console.error('Error fetching campaigns:', error);
+      alert('Failed to load campaigns. Please refresh the page.');
     }
   };
 
@@ -85,7 +76,7 @@ export default function Campaigns() {
     }
   };
 
-  const handleSubmitCampaign = () => {
+  const handleSubmitCampaign = async () => {
     if (!campaignName.trim()) {
       alert('Please enter a campaign name');
       return;
@@ -96,35 +87,43 @@ export default function Campaigns() {
       return;
     }
     
-    const selectedBodies = emailBodies.filter(body => selectedEmailBodies.includes(body._id));
-    
-    // Create new campaign object
-    const newCampaign = {
-      id: Date.now().toString(), // Simple ID generation
-      name: campaignName.trim(),
-      description: campaignDescription.trim() || 'No description provided',
-      emailBodies: selectedBodies,
-      createdAt: new Date(),
-      status: 'Draft',
-      sentCount: 0
-    };
-    
-    // Add to campaigns list
-    setCampaigns(prev => [...prev, newCampaign]);
-    
-    console.log('Created campaign:', newCampaign);
-    alert(`Campaign "${campaignName}" created successfully with ${selectedEmailBodies.length} email body(ies)!`);
-    
-    // Reset form
-    setShowCreateForm(false);
-    setSelectedEmailBodies([]);
-    setCampaignName('');
-    setCampaignDescription('');
+    setLoading(true);
+    try {
+      const selectedBodies = emailBodies.filter(body => selectedEmailBodies.includes(body._id));
+      
+      const campaignData = {
+        name: campaignName.trim(),
+        description: campaignDescription.trim() || 'No description provided',
+        emailBodies: selectedBodies,
+        createdBy: 'user'
+      };
+      
+      const response = await axios.post('http://localhost:3001/campaigns', campaignData);
+      
+      // Refresh campaigns list
+      await fetchCampaigns();
+      
+      alert(`Campaign "${campaignName}" created successfully with ${selectedEmailBodies.length} email body(ies)!`);
+      
+      // Reset form
+      setShowCreateForm(false);
+      setSelectedEmailBodies([]);
+      setCampaignName('');
+      setCampaignDescription('');
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      alert('Failed to create campaign: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSendCampaign = (campaignId) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (!campaign) return;
+    const campaign = campaigns.find(c => c._id === campaignId);
+    if (!campaign) {
+      alert('Campaign not found');
+      return;
+    }
     
     if (emailLists.length === 0) {
       alert('No email lists found. Please create email lists first.');
@@ -152,33 +151,42 @@ export default function Campaigns() {
     }
   };
 
-  const handleConfirmSend = () => {
+  const handleConfirmSend = async () => {
     if (selectedEmails.length === 0) {
       alert('Please select at least one email to send the campaign to.');
       return;
     }
 
-    const selectedEmailsData = emailLists.filter(email => selectedEmails.includes(email._id));
-    
-    // Update campaign with sent information
-    setCampaigns(prev => prev.map(c => 
-      c.id === currentCampaign.id 
-        ? { 
-            ...c, 
-            status: 'Sent', 
-            sentCount: selectedEmails.length,
-            sentTo: selectedEmailsData,
-            sentAt: new Date()
-          }
-        : c
-    ));
+    setLoading(true);
+    try {
+      const selectedEmailsData = emailLists.filter(email => selectedEmails.includes(email._id));
+      
+      if (selectedEmailsData.length === 0) {
+        alert('No valid email recipients found. Please check your selection.');
+        setLoading(false);
+        return;
+      }
 
-    alert(`Campaign "${currentCampaign.name}" sent successfully to ${selectedEmails.length} recipients!`);
-    
-    // Reset send form
-    setShowSendForm(false);
-    setCurrentCampaign(null);
-    setSelectedEmails([]);
+      const response = await axios.post(`http://localhost:3001/campaigns/${currentCampaign._id}/send`, {
+        recipients: selectedEmailsData
+      });
+
+      // Refresh campaigns list
+      await fetchCampaigns();
+
+      alert(`Campaign "${currentCampaign.name}" sent successfully to ${selectedEmails.length} recipients!`);
+      
+      // Reset send form
+      setShowSendForm(false);
+      setCurrentCampaign(null);
+      setSelectedEmails([]);
+    } catch (error) {
+      console.error('Error sending campaign:', error);
+      console.error('Error response:', error.response?.data);
+      alert('Failed to send campaign: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancelSend = () => {
@@ -187,12 +195,22 @@ export default function Campaigns() {
     setSelectedEmails([]);
   };
 
-  const handleDeleteCampaign = (campaignId) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
+  const handleDeleteCampaign = async (campaignId) => {
+    const campaign = campaigns.find(c => c._id === campaignId);
     if (!campaign) return;
     
     if (window.confirm(`Are you sure you want to delete campaign "${campaign.name}"?`)) {
-      setCampaigns(prev => prev.filter(c => c.id !== campaignId));
+      setLoading(true);
+      try {
+        await axios.delete(`http://localhost:3001/campaigns/${campaignId}`);
+        await fetchCampaigns();
+        alert('Campaign deleted successfully');
+      } catch (error) {
+        console.error('Error deleting campaign:', error);
+        alert('Failed to delete campaign: ' + (error.response?.data?.message || error.message));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -489,6 +507,22 @@ export default function Campaigns() {
           <h3 style={{ marginTop: 0, color: '#000', marginBottom: '20px' }}>
             Send Campaign: "{currentCampaign.name}"
           </h3>
+          
+          {/* Debug Info */}
+          <div style={{ 
+            backgroundColor: '#f0f8ff', 
+            padding: '10px', 
+            marginBottom: '15px', 
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#333'
+          }}>
+            <strong>Debug Info:</strong><br />
+            Campaign ID: {currentCampaign._id}<br />
+            Campaign Status: {currentCampaign.status}<br />
+            Email Lists Count: {emailLists.length}<br />
+            Selected Emails: {selectedEmails.length}
+          </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
@@ -634,19 +668,19 @@ export default function Campaigns() {
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               onClick={handleConfirmSend}
-              disabled={selectedEmails.length === 0}
+              disabled={selectedEmails.length === 0 || loading}
               style={{
-                backgroundColor: selectedEmails.length === 0 ? '#ccc' : '#28a745',
+                backgroundColor: selectedEmails.length === 0 || loading ? '#ccc' : '#28a745',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
                 padding: '12px 24px',
                 fontSize: '14px',
-                cursor: selectedEmails.length === 0 ? 'not-allowed' : 'pointer',
+                cursor: selectedEmails.length === 0 || loading ? 'not-allowed' : 'pointer',
                 fontWeight: '500'
               }}
             >
-              Send Campaign ({selectedEmails.length} recipients)
+              {loading ? 'Sending...' : `Send Campaign (${selectedEmails.length} recipients)`}
             </button>
             <button
               onClick={handleCancelSend}
@@ -706,7 +740,7 @@ export default function Campaigns() {
               </h3>
               
               {campaigns.map((campaign) => (
-                <div key={campaign.id} style={{
+                <div key={campaign._id} style={{
                   backgroundColor: 'white',
                   border: '1px solid #e0e0e0',
                   borderRadius: '8px',
@@ -742,31 +776,32 @@ export default function Campaigns() {
                     {/* Action Buttons */}
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
-                        onClick={() => handleSendCampaign(campaign.id)}
-                        disabled={campaign.status === 'Sent'}
+                        onClick={() => handleSendCampaign(campaign._id)}
+                        disabled={campaign.status === 'Sent' || loading}
                         style={{
-                          backgroundColor: campaign.status === 'Sent' ? '#ccc' : '#007bff',
+                          backgroundColor: campaign.status === 'Sent' || loading ? '#ccc' : '#007bff',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
                           padding: '6px 12px',
                           fontSize: '12px',
-                          cursor: campaign.status === 'Sent' ? 'not-allowed' : 'pointer',
+                          cursor: campaign.status === 'Sent' || loading ? 'not-allowed' : 'pointer',
                           fontWeight: '500'
                         }}
                       >
                         {campaign.status === 'Sent' ? 'Sent' : 'Send to Email Lists'}
                       </button>
                       <button
-                        onClick={() => handleDeleteCampaign(campaign.id)}
+                        onClick={() => handleDeleteCampaign(campaign._id)}
+                        disabled={loading}
                         style={{
-                          backgroundColor: '#dc3545',
+                          backgroundColor: loading ? '#999' : '#dc3545',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
                           padding: '6px 12px',
                           fontSize: '12px',
-                          cursor: 'pointer',
+                          cursor: loading ? 'not-allowed' : 'pointer',
                           fontWeight: '500'
                         }}
                       >

@@ -12,13 +12,19 @@ function Login() {
     e.preventDefault();
 
     axios
-      .post("http://localhost:3001/Login", { email, password })
+      .post("http://localhost:3001/login", { email, password })
       .then((result) => {
         console.log("Login response:", result.data);
-        if (result.data === "Success") {
+        if (result.data.success) {
+          // Store user data from database response
+          localStorage.setItem('userEmail', result.data.user.email);
+          localStorage.setItem('userName', result.data.user.name);
+          localStorage.setItem('userId', result.data.user.id);
+          localStorage.setItem('userSignedIn', 'true');
+          localStorage.setItem('signInDate', new Date().toISOString());
           navigate("/Dashboard");
         } else {
-          alert("Invalid login credentials");
+          alert(result.data.message || "Invalid login credentials");
         }
       })
       .catch((error) => {

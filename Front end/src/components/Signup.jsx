@@ -15,8 +15,8 @@ function Signup(){
         e.preventDefault()
         axios.post('http://localhost:3001/signup',{name,email,password})
         .then(result=>{console.log(result)
-            localStorage.setItem('userSignedIn', 'true');
-            localStorage.setItem('signInDate', new Date().toISOString());
+            // Don't store user data here - it will be fetched from database during login
+            alert('Account created successfully! Please login with your credentials.');
             navigate('/login');
         })
         .catch(error=>console.log(error))
@@ -55,7 +55,7 @@ function Signup(){
                     <button type="submit">Register</button>
                 </form>
                 <br />
-                <p>Don't have an account?
+                <p>Already have an account?{" "}
                 <Link to="/login">Login</Link>
                 </p>
             </div>

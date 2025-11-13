@@ -10,17 +10,7 @@ import Segmants from './components/segmants.jsx';
 import EmailTemplates from './components/EmailTemplates.jsx';
 import EmailBuilder from './components/EmailBuilder.jsx';
 import CompanyInfo from './components/CompanyInfo.jsx';
-import EmailBodyEditor from './components/EmailBodyEditor.jsx'; // Add this import
-
-function shouldShowSignup() {
-  const signedIn = localStorage.getItem('userSignedIn');
-  const signInDate = localStorage.getItem('signInDate');
-  if (!signedIn || !signInDate) return true;
-  const now = new Date();
-  const lastSignIn = new Date(signInDate);
-  const diffDays = (now - lastSignIn) / (1000 * 60 * 60 * 24);
-  return diffDays > 15;
-}
+import EmailBodyEditor from './components/EmailBodyEditor.jsx';
 
 // Layout component to reduce repetition
 const DashboardLayout = ({ children }) => (
@@ -33,13 +23,11 @@ const DashboardLayout = ({ children }) => (
 );
 
 function App() {
-  const showSignup = shouldShowSignup();
-
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Front />} />
-        {showSignup && <Route path="/Signup" element={<Signup />} />}
+        <Route path="/Signup" element={<Signup />} />
         <Route path="/Login" element={<Login />} />
         
         {/* Dashboard Routes with Layout */}
