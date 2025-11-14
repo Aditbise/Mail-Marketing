@@ -1,13 +1,20 @@
 const mongoose = require('mongoose');
 
-const Campaignschema = new mongoose.Schema({
-    Name: { type: String, required: true },
-    Subject: { type: String, required: true },
-    Image: { type: Buffer, required: true },
-    ImageType: { type: String, required: true, enum: ['png', 'jpg', 'jpeg', 'gif']},
-    SegmentAddress: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+const campaignSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  emailBodies: [{ type: Object }],
+  segments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Segment' }],
+  recipients: [{ type: Object }],
+  companyInfo: { type: Object },
+  status: { 
+    type: String, 
+    enum: ['Draft', 'Sent', 'Scheduled'], 
+    default: 'Draft' 
+  },
+  sentCount: { type: Number, default: 0 },
+  deliveredCount: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
+  sentAt: { type: Date }
 });
 
-module.exports = mongoose.model('Campaign', Campaignschema);
+module.exports = mongoose.model('Campaign', campaignSchema);

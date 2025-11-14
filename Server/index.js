@@ -1,20 +1,35 @@
+require('dotenv').config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
-const path = require('path');
-const fs = require('fs');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const path = require("path");
+const fs = require("fs");
 
 const EmployeeModel = require('./Models/Email.js');
 const EmailListModel = require('./Models/EmailList.js');
 const EmailTemplateModel = require('./Models/EmailTemplate.js');   
 const SegmentModel = require('./Models/Segmant.js');
 const CompanyInfo = require('./Models/CompanyInfo');
-const EmailBody = require('./Models/EmailBody'); // Add this line
+const EmailBody = require('./Models/EmailBody'); 
+const EmailCampaign = require('./Models/EmailCampaign');
+const EmailTracking = require('./Models/EmailTracking');
+const EmailService = require('./services/EmailService.js');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: [
+        "http://localhost:3000", 
+        "http://localhost:5173",  
+        "http://127.0.0.1:5173"
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -106,7 +121,15 @@ const uploadEmailBodyFiles = multer({
     }
 });
 
-mongoose.connect("mongodb://localhost:27017/email");
+// Use environment variables
+const PORT = process.env.PORT || 3001;
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/mail-marketing";
+const JWT_SECRET = process.env.JWT_SECRET || "your-fallback-secret";
+
+// Update MongoDB connection to use environment variable
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log("Connected to MongoDB successfully"))
+  .catch(err => console.error("MongoDB connection error:", err));
 
 // ===== AUTH ROUTES =====
 app.post('/login', (req, res) => {
@@ -622,7 +645,331 @@ app.delete('/email-bodies/:id/attachments/:attachmentId', async (req, res) => {
     }
 });
 
-app.listen(3001, () => {
-    console.log("Server is running on port 3001");
+// ===== EMAIL CAMPAIGN ROUTES =====
+
+// Get all email campaigns
+app.get('/email-campaigns', async (req, res) => {
+  try {
+    const campaigns = await EmailCampaign.find()
+      .populate('emailBodies')
+      .populate('targetSegments')
+      .sort({ createdAt: -1 });
+    res.json(campaigns);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching campaigns', error: error.message });
+  }
+});
+
+// Create new email campaign
+app.post('/email-campaigns', async (req, res) => {
+  try {
+    const { 
+      name, 
+      description, 
+      emailBodies, 
+      targetSegments,
+      subject,
+      fromName,
+      fromEmail,
+      replyTo
+    } = req.body;
+
+    // Get company info for default from email
+    const companyInfo = await CompanyInfo.findOne();
+    
+    const campaign = new EmailCampaign({
+      name,
+      description,
+      emailBodies,
+      targetSegments,
+      subject: subject || name,
+      fromName: fromName || companyInfo?.companyName || 'Mail Marketing',
+      fromEmail: fromEmail || companyInfo?.email || 'noreply@example.com',
+      replyTo: replyTo || fromEmail || companyInfo?.email
+    });
+
+    await campaign.save();
+    
+    const populatedCampaign = await EmailCampaign.findById(campaign._id)
+      .populate('emailBodies')
+      .populate('targetSegments');
+
+    res.json({ message: 'Campaign created successfully', campaign: populatedCampaign });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating campaign', error: error.message });
+  }
+});
+
+// Prepare campaign recipients (get deduplicated emails from segments)
+app.post('/email-campaigns/:id/prepare', async (req, res) => {
+  try {
+    const campaign = await EmailCampaign.findById(req.params.id)
+      .populate('targetSegments');
+
+    if (!campaign) {
+      return res.status(404).json({ message: 'Campaign not found' });
+    }
+
+    // Get deduplicated emails from segments
+    const segmentIds = campaign.targetSegments.map(segment => segment._id);
+    
+    const response = await fetch('http://localhost:3001/segments/get-emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ segmentIds })
+    });
+    
+    const emailData = await response.json();
+    
+    // Prepare recipients array
+    const recipients = emailData.uniqueEmails.map(email => ({
+      email: email.email,
+      name: email.name,
+      position: email.position,
+      company: email.company,
+      segmentId: email.sourceSegments?.[0]?.id || '',
+      segmentName: email.sourceSegments?.[0]?.name || '',
+      status: 'pending'
+    }));
+
+    // Update campaign with recipients
+    await EmailCampaign.findByIdAndUpdate(req.params.id, {
+      recipients,
+      totalRecipients: recipients.length,
+      duplicatesRemoved: emailData.duplicatesRemoved || 0,
+      updatedAt: new Date()
+    });
+
+    res.json({ 
+      message: 'Campaign prepared successfully',
+      totalRecipients: recipients.length,
+      duplicatesRemoved: emailData.duplicatesRemoved || 0
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error preparing campaign', error: error.message });
+  }
+});
+
+// Send campaign
+app.post('/email-campaigns/:id/send', async (req, res) => {
+  try {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    const result = await EmailService.sendCampaign(req.params.id, baseUrl);
+    
+    res.json({ 
+      message: 'Campaign sent successfully',
+      ...result
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error sending campaign', error: error.message });
+  }
+});
+
+// Send campaign emails
+app.post('/send-campaign', async (req, res) => {
+  try {
+    const { campaign } = req.body;
+    
+    console.log('📧 Received campaign send request:', campaign.name);
+    
+    if (!campaign || !campaign.recipients || campaign.recipients.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid campaign data - no recipients found' 
+      });
+    }
+
+    if (!campaign.emailBodies || campaign.emailBodies.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid campaign data - no email bodies found' 
+      });
+    }
+
+    // Send the campaign
+    const results = await EmailService.sendCampaignEmails(campaign);
+    
+    res.json({
+      success: true,
+      message: `Campaign "${campaign.name}" sent successfully!`,
+      data: results
+    });
+    
+  } catch (error) {
+    console.error('❌ Campaign send error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to send campaign', 
+      message: error.message 
+    });
+  }
+});
+
+// Test email endpoint for demonstrations
+app.post('/send-test-email', async (req, res) => {
+  try {
+    const { email, subject } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Email address required' 
+      });
+    }
+    
+    const result = await EmailService.sendTestEmail(email, subject);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Test email sent successfully!',
+        messageId: result.messageId
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send test email',
+        message: result.error
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Test email error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Server error', 
+      message: error.message 
+    });
+  }
+});
+
+// Get email service status
+app.get('/email-service-status', (req, res) => {
+  res.json({
+    success: true,
+    status: 'Email service ready',
+    features: [
+      'Campaign email sending',
+      'Contact personalization', 
+      'Segment-based targeting',
+      'Delivery tracking',
+      'Test email functionality'
+    ]
+  });
+});
+
+// Add this route to get real analytics data
+
+app.get('/analytics', async (req, res) => {
+  try {
+    const contacts = await Contact.find();
+    const segments = await Segment.find();
+    const campaigns = await Campaign.find(); // NOW FROM DATABASE!
+    
+    const emailStats = {
+      totalContacts: contacts.length,
+      totalSegments: segments.length, 
+      totalCampaigns: campaigns.length,
+      emailsSent: campaigns.reduce((total, campaign) => total + (campaign.sentCount || 0), 0),
+      
+      // Real contact growth over time
+      contactGrowth: calculateContactGrowth(contacts),
+      
+      // Real segment distribution
+      segmentDistribution: calculateSegmentDistribution(segments, contacts),
+      
+      // Recent activity from actual data
+      recentActivity: getRecentActivity(contacts, segments, campaigns)
+    };
+    
+    res.json({
+      success: true,
+      data: emailStats
+    });
+    
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get analytics'
+    });
+  }
+});
+
+// Helper functions for real calculations
+function calculateContactGrowth(contacts) {
+  const monthlyGrowth = {};
+  const now = new Date();
+  
+  // Group contacts by month they were added
+  contacts.forEach(contact => {
+    const createdDate = contact.createdAt || contact.dateAdded || now;
+    const monthKey = `${createdDate.getFullYear()}-${createdDate.getMonth()}`;
+    monthlyGrowth[monthKey] = (monthlyGrowth[monthKey] || 0) + 1;
+  });
+  
+  // Convert to array format for charts
+  const last6Months = [];
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+    last6Months.push({
+      month: date.toLocaleDateString('en', { month: 'short' }),
+      count: monthlyGrowth[monthKey] || 0
+    });
+  }
+  
+  return last6Months;
+}
+
+function calculateSegmentDistribution(segments, contacts) {
+  return segments.map(segment => ({
+    name: segment.name,
+    contactCount: segment.contacts ? segment.contacts.length : 0,
+    percentage: contacts.length > 0 ? 
+      Math.round(((segment.contacts?.length || 0) / contacts.length) * 100) : 0
+  }));
+}
+
+function getRecentActivity(contacts, segments, campaigns) {
+  const activities = [];
+  
+  // Recent contacts added
+  const recentContacts = contacts
+    .sort((a, b) => new Date(b.createdAt || b.dateAdded) - new Date(a.createdAt || a.dateAdded))
+    .slice(0, 3);
+    
+  recentContacts.forEach(contact => {
+    activities.push({
+      type: 'contact_added',
+      description: `New contact: ${contact.name || contact.email}`,
+      timestamp: contact.createdAt || contact.dateAdded || new Date(),
+      icon: '👤'
+    });
+  });
+  
+  // Recent segments created
+  const recentSegments = segments
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 2);
+    
+  recentSegments.forEach(segment => {
+    activities.push({
+      type: 'segment_created',
+      description: `New segment: ${segment.name}`,
+      timestamp: segment.createdAt || new Date(),
+      icon: '🎯'
+    });
+  });
+  
+  return activities
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 5);
+}
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

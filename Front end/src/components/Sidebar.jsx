@@ -12,6 +12,7 @@ function Sidebar() {
               <h2 style={{color:'white',fontSize:'25px'}}>Starter Shelf :</h2>
               <li><Link to="/dashboard">Dashboard</Link></li>
               <li><Link to="/Campaigns">Campaigns</Link></li>
+              <li><Link to="/features">Features</Link></li>
 
             </div>
             <div>

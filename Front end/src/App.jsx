@@ -6,11 +6,12 @@ import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import Front from './components/Front.jsx';
 import EmailLists from './components/EmailLists.jsx';
-import Segmants from './components/segmants.jsx';
+import Segmants from './components/Segmants.jsx';
 import EmailTemplates from './components/EmailTemplates.jsx';
 import EmailBuilder from './components/EmailBuilder.jsx';
 import CompanyInfo from './components/CompanyInfo.jsx';
-import EmailBodyEditor from './components/EmailBodyEditor.jsx'; // Add this import
+import EmailBodyEditor from './components/EmailBodyEditor.jsx'; 
+import Features from './components/Features.jsx'; 
 
 function shouldShowSignup() {
   const signedIn = localStorage.getItem('userSignedIn');
@@ -51,6 +52,7 @@ function App() {
         <Route path="/segments" element={<DashboardLayout><Segmants /></DashboardLayout>} />
         <Route path="/email-templates" element={<DashboardLayout><EmailTemplates /></DashboardLayout>} />
         <Route path="/company-info" element={<DashboardLayout><CompanyInfo /></DashboardLayout>} />
+        <Route path="/features" element={<DashboardLayout><Features /></DashboardLayout>} />
       </Routes>
     </BrowserRouter>
   );
