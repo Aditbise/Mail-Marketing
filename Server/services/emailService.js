@@ -1,154 +1,185 @@
-const nodemailer = require('nodemailer');
-const emailConfig = require('../config/emailConfig');
+const axios = require('axios');
 
 class EmailService {
-    constructor() {
-        this.transporter = null;
-        this.initializeTransporter();
-    }
+  constructor() {
+    // Brevo API configuration
+    this.brevoApiUrl = 'https://api.brevo.com/v3/smtp/email';
+    this.headers = {
+      'accept': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+      'content-type': 'application/json'
+    };
+  }
 
-    async initializeTransporter() {
+  async sendCampaignEmails(campaign) {
+    console.log(`🚀 Starting campaign: ${campaign.name}`);
+    console.log(`📧 Sending to ${campaign.recipients.length} recipients via Brevo HTTP API`);
+    console.log(`📝 Email bodies count: ${campaign.emailBodies.length}`);
+    
+    if (campaign.emailBodies.length > 0) {
+      console.log('📝 First email body structure:', {
+        name: campaign.emailBodies[0].name,
+        subject: campaign.emailBodies[0].subject,
+        fromEmail: campaign.emailBodies[0].fromEmail,
+        fromName: campaign.emailBodies[0].fromName,
+        hasContent: !!campaign.emailBodies[0].content,
+        contentLength: campaign.emailBodies[0].content?.length || 0
+      });
+    }
+    
+    const results = [];
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const recipient of campaign.recipients) {
+      for (const emailBody of campaign.emailBodies) {
         try {
-            this.transporter = nodemailer.createTransport(emailConfig.smtp);
-            
-            // Verify connection configuration
-            await this.transporter.verify();
-            console.log('✅ Email service initialized successfully');
-            console.log('📧 Ready to send emails via Gmail SMTP');
-        } catch (error) {
-            console.error('❌ Email service initialization failed:', error.message);
-            console.log('⚠️  Please check your Gmail configuration in config/emailConfig.js');
-            console.log('⚠️  Make sure you have:');
-            console.log('   1. Enabled 2-factor authentication');
-            console.log('   2. Generated an app-specific password');
-            console.log('   3. Updated emailConfig.js with your credentials');
-        }
-    }
-
-    async sendCampaignEmail(recipient, campaign, emailBody) {
-        if (!this.transporter) {
-            throw new Error('Email service not initialized. Please check your Gmail configuration.');
-        }
-
-        try {
-            // Replace template variables
-            const subject = emailConfig.templates.campaignEmail.subject
-                .replace('{{campaignName}}', campaign.name);
-
-            const htmlContent = emailConfig.templates.campaignEmail.html
-                .replace('{{campaignName}}', campaign.name)
-                .replace('{{campaignDescription}}', campaign.description || 'No description')
-                .replace('{{emailContent}}', this.formatEmailContent(emailBody.bodyContent))
-                .replace('{{sentDate}}', new Date().toLocaleDateString());
-
-            const mailOptions = {
-                from: `${emailConfig.from.name} <${emailConfig.from.email}>`,
-                to: recipient.email,
-                subject: subject,
-                html: htmlContent,
-                text: this.htmlToText(emailBody.bodyContent) // Fallback text version
-            };
-
-            console.log(`📧 Sending email to: ${recipient.name} (${recipient.email})`);
-            console.log(`📄 Subject: ${subject}`);
-            
-            const result = await this.transporter.sendMail(mailOptions);
-            
-            console.log(`✅ Email sent successfully! Message ID: ${result.messageId}`);
-            
-            return {
-                success: true,
-                messageId: result.messageId,
-                recipient: recipient.email
-            };
-
-        } catch (error) {
-            console.error(`❌ Failed to send email to ${recipient.email}:`, error.message);
-            
-            return {
-                success: false,
-                error: error.message,
-                recipient: recipient.email
-            };
-        }
-    }
-
-    async sendCampaignToMultipleRecipients(recipients, campaign) {
-        const results = [];
-        
-        console.log(`\n=== SENDING CAMPAIGN "${campaign.name}" ===`);
-        console.log(`📬 Recipients: ${recipients.length}`);
-        console.log(`📄 Email Bodies: ${campaign.emailBodies.length}`);
-        
-        for (const recipient of recipients) {
-            console.log(`\n--- Processing recipient: ${recipient.name} ---`);
-            
-            // Send each email body to the recipient
-            for (const emailBody of campaign.emailBodies) {
-                console.log(`📝 Sending email body: "${emailBody.Name || 'Untitled'}"`);
-                
-                const result = await this.sendCampaignEmail(recipient, campaign, emailBody);
-                results.push({
-                    ...result,
-                    recipientName: recipient.name,
-                    emailBodyName: emailBody.Name || 'Untitled'
-                });
-                
-                // Add delay between emails to avoid rate limiting
-                await this.delay(1000); // 1 second delay
+          const personalizedContent = this.personalizeEmail(
+            emailBody.content, 
+            recipient, 
+            campaign.companyInfo
+          );
+          
+          console.log(`\n📧 EMAIL CONTENT DEBUG for ${recipient.email}:`);
+          console.log(`Content type: ${typeof personalizedContent}`);
+          console.log(`Content length: ${personalizedContent.length}`);
+          console.log(`First 200 chars: ${personalizedContent.substring(0, 200)}`);
+          console.log(`Contains HTML tags: ${/<[^>]+>/.test(personalizedContent)}`);
+          
+          // Brevo API payload
+          const emailData = {
+            sender: {
+              name: emailBody.fromName || campaign.companyInfo?.name || 'Final Year Project',
+              email: emailBody.fromEmail || process.env.BREVO_EMAIL
+            },
+            to: [{
+              email: recipient.email,
+              name: recipient.name || 'Valued Customer'
+            }],
+            subject: emailBody.subject || 'Newsletter from Final Year Project',
+            htmlContent: personalizedContent,
+            textContent: this.stripHtml(personalizedContent),
+            // Add headers to improve deliverability
+            headers: {
+              'List-Unsubscribe': `<mailto:${campaign.companyInfo?.email || 'noreply@company.com'}>`
             }
-        }
-        
-        const successful = results.filter(r => r.success).length;
-        const failed = results.filter(r => !r.success).length;
-        
-        console.log(`\n=== CAMPAIGN SEND SUMMARY ===`);
-        console.log(`✅ Successful: ${successful}`);
-        console.log(`❌ Failed: ${failed}`);
-        console.log(`📊 Total: ${results.length}`);
-        
-        return {
-            results,
-            summary: {
-                total: results.length,
-                successful,
-                failed
-            }
-        };
-    }
+          };
 
-    formatEmailContent(content) {
-        if (!content) return '<p>No content available</p>';
-        
-        // Convert line breaks to HTML
-        return content.replace(/\n/g, '<br>');
-    }
-
-    htmlToText(html) {
-        if (!html) return 'No content available';
-        
-        // Simple HTML to text conversion
-        return html.replace(/<[^>]*>/g, '').replace(/\n/g, ' ').trim();
-    }
-
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    async testConnection() {
-        try {
-            if (!this.transporter) {
-                throw new Error('Email service not initialized');
-            }
-            
-            await this.transporter.verify();
-            console.log('✅ Gmail SMTP connection test successful');
-            return { success: true };
+          console.log(`\n📤 Sending Brevo payload:`);
+          console.log(`  To: ${emailData.to[0].email}`);
+          console.log(`  From: ${emailData.sender.email}`);
+          console.log(`  Subject: ${emailData.subject}`);
+          console.log(`  HTML Content Length: ${emailData.htmlContent.length}`);
+          console.log(`  Has HTML: ${emailData.htmlContent.includes('<')}`);
+          
+          const response = await axios.post(this.brevoApiUrl, emailData, {
+            headers: this.headers
+          });
+          
+          results.push({
+            email: recipient.email,
+            name: recipient.name,
+            success: true,
+            messageId: response.data.messageId,
+            timestamp: new Date()
+          });
+          
+          successCount++;
+          console.log(`✅ Sent successfully to: ${recipient.email} (ID: ${response.data.messageId})\n`);
+          
+          // Small delay to be respectful to API
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
         } catch (error) {
-            console.error('❌ Gmail SMTP connection test failed:', error.message);
-            return { success: false, error: error.message };
+          console.error(`❌ Failed to send to ${recipient.email}:`, error.response?.data || error.message);
+          results.push({
+            email: recipient.email,
+            name: recipient.name,
+            success: false,
+            error: error.response?.data?.message || error.message,
+            timestamp: new Date()
+          });
+          failCount++;
         }
+      }
     }
+    
+    console.log(`🎯 Campaign completed: ${successCount} success, ${failCount} failed`);
+    
+    return {
+      success: true,
+      totalSent: successCount,
+      totalFailed: failCount,
+      results: results,
+      summary: {
+        campaignName: campaign.name,
+        totalRecipients: campaign.recipients.length,
+        emailBodies: campaign.emailBodies.length,
+        segments: campaign.segments.length,
+        deliveryRate: ((successCount / (successCount + failCount)) * 100).toFixed(2) + '%'
+      }
+    };
+  }
+
+  personalizeEmail(content, recipient, companyInfo) {
+    return content
+      .replace(/\{name\}/g, recipient.name || 'Valued Recipient')
+      .replace(/\{email\}/g, recipient.email)
+      .replace(/\{company\}/g, recipient.company || 'Your Company')
+      .replace(/\{position\}/g, recipient.position || 'Professional')
+      .replace(/\{companyName\}/g, companyInfo?.name || 'Final Year Project Demo')
+      .replace(/\{firstName\}/g, (recipient.name || '').split(' ')[0] || 'Friend');
+  }
+
+  stripHtml(html) {
+    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  async sendTestEmail(toEmail, subject = 'Test Email from Final Year Project') {
+    try {
+      const emailData = {
+        sender: {
+          name: "Final Year Project Demo",
+          email: process.env.BREVO_EMAIL
+        },
+        to: [{
+          email: toEmail,
+          name: "Test Recipient"
+        }],
+        subject: subject,
+        htmlContent: `
+          <h2>🎉 Final Year Project Email System Working!</h2>
+          <p>This email was sent using <strong>Brevo HTTP API</strong> - a professional email service!</p>
+          <p><strong>Project Features Demonstrated:</strong></p>
+          <ul>
+            <li>✅ Professional Email API Integration (HTTP REST)</li>
+            <li>✅ Contact Management System</li>
+            <li>✅ Advanced Segmentation</li>
+            <li>✅ Campaign Management</li>
+            <li>✅ Real Email Delivery</li>
+          </ul>
+          <p>Email sent at: ${new Date().toLocaleString()}</p>
+          <p><strong>Technical Stack:</strong> React.js, Node.js, MongoDB, Brevo HTTP API</p>
+          <hr>
+          <small>This demonstrates a complete email marketing system for final year project.</small>
+        `,
+        textContent: 'Final Year Project Email System - Professional HTTP API Integration Working!'
+      };
+
+      const response = await axios.post(this.brevoApiUrl, emailData, {
+        headers: this.headers
+      });
+      
+      return { success: true, messageId: response.data.messageId };
+      
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message,
+        details: error.response?.data
+      };
+    }
+  }
 }
 
 module.exports = new EmailService();
