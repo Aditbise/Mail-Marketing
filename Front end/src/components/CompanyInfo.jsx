@@ -229,14 +229,13 @@ export default function CompanyInfo() {
                       background: '#f44336',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
+                      borderRadius: '20%',
+                      width: '40px',
+                      height: '40px',
                       cursor: 'pointer',
-                      fontSize: '14px'
+                      fontSize: '14px',
                     }}
-                  >
-                    ×
+                  >X
                   </button>
                 </div>
               )}

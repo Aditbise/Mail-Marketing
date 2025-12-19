@@ -38,41 +38,29 @@ export default function Segments() {
   const selectedSegments = segments.filter(seg => selectedSegmentIds.includes(seg._id));
 
   return (
-    <div className="returndiv">
+    <div className="segments-container">
       <h2>Email Segments</h2>
 
-      {/* Open Modal Button */}
-      <button onClick={() => setShow(true)}>Search and Create</button>
-      <button
-        onClick={() => setShowUpdate(true)}
-        disabled={selectedSegmentIds.length !== 1}
-        style={{
-          marginLeft: "10px",
-          background: selectedSegmentIds.length === 1 ? "#007bff" : "#ccc",
-          color: "#fff",
-          cursor: selectedSegmentIds.length === 1 ? "pointer" : "not-allowed",
-          borderRadius: "6px",
-          padding: "6px 16px",
-          border: "none",
-        }}
-      >
-        Update
-      </button>
-      <button
-        onClick={handleRemoveSegments}
-        disabled={selectedSegmentIds.length === 0}
-        style={{
-          marginLeft: "10px",
-          background: selectedSegmentIds.length > 0 ? "#e74c3c" : "#ccc",
-          color: "#fff",
-          cursor: selectedSegmentIds.length > 0 ? "pointer" : "not-allowed",
-          borderRadius: "6px",
-          padding: "6px 16px",
-          border: "none",
-        }}
-      >
-        Remove Selected
-      </button>
+      {/* Button Group */}
+      <div className="segments-button-group">
+        <button onClick={() => setShow(true)} className="segments-button">
+          ➕ Search and Create
+        </button>
+        <button
+          onClick={() => setShowUpdate(true)}
+          disabled={selectedSegmentIds.length !== 1}
+          className="segments-button segments-button-update"
+        >
+          ✏️ Update
+        </button>
+        <button
+          onClick={handleRemoveSegments}
+          disabled={selectedSegmentIds.length === 0}
+          className="segments-button segments-button-remove"
+        >
+          🗑️ Remove Selected
+        </button>
+      </div>
 
       {/* Popover modals */}
       <Segmentsearch open={show} onClose={() => setShow(false)} />
@@ -83,8 +71,11 @@ export default function Segments() {
         isEdit={true}
       />
 
+      {/* Table Wrapper */}
+      <div className="segments-table-wrapper">
+
       {/* Table */}
-      <table border="1" cellPadding="10" style={{ marginTop: "20px", width: "100%" }}>
+      <table className="segments-table">
         <thead>
           <tr>
             <th>Select</th>
@@ -112,17 +103,17 @@ export default function Segments() {
               <td>{segment.name}</td>
               <td>{segment.description}</td>
               <td>
-                <div className="segmentsearch">
+                <div>
                   {segment.contacts && segment.contacts.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                    <ul className="segments-email-list">
                       {segment.contacts.map(email => (
-                        <li key={email._id} style={{ color: "#7a7a7aff", fontWeight: "500" }}>
+                        <li key={email._id} className="segments-email-item">
                           {email.name} ({email.email})
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <span style={{ color: "#888" }}>No emails</span>
+                    <span className="segments-empty-message">No emails</span>
                   )}
                 </div>
               </td>
@@ -130,6 +121,7 @@ export default function Segments() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

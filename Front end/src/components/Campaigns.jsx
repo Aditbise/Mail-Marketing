@@ -43,10 +43,11 @@ export default function Campaigns() {
 
   const fetchEmailBodies = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/email-bodies');
+      // Fetch email templates instead of email bodies
+      const response = await axios.get('http://localhost:3001/email-templates');
       setEmailBodies(response.data || []);
     } catch (error) {
-      console.error('Error fetching email bodies:', error);
+      console.error('Error fetching email templates:', error);
       setEmailBodies([]);
     }
   };
@@ -318,63 +319,26 @@ export default function Campaigns() {
   };
 
   return (
-    <div style={{ padding: '20px', minHeight: '100vh', backgroundColor: '#1a1a1a' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '20px' 
-      }}>
-        <h1 style={{ color: 'white' }}>Email Campaigns</h1>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+    <div className="campaign-container">
+      <div className="campaign-header">
+        <h1>Email Campaigns</h1>
+        <div className="campaign-header-actions">
           {/* Quick Stats */}
-          <div style={{ 
-            backgroundColor: 'rgba(255,255,255,0.1)', 
-            padding: '8px 12px', 
-            borderRadius: '4px', 
-            fontSize: '14px',
-            color: 'white'
-          }}>
+          <div className="campaign-stats">
             📧 {emailBodies.length} Bodies | 🎯 {segments.length} Segments
           </div>
           
           <button
             onClick={handleCreateCampaign}
-            style={{
-              backgroundColor: '#4caf50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '12px 20px',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s ease'
-            }}
+            className="campaign-btn campaign-btn-create"
           >
-            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>+</span>
+            <span>+</span>
             Create Campaign
           </button>
 
           <button
             onClick={handleSendTestEmail}
-            style={{
-              backgroundColor: '#17a2b8',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '12px 20px',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
+            className="campaign-btn campaign-btn-test"
           >
             📧 Send Test Email
           </button>
@@ -383,27 +347,13 @@ export default function Campaigns() {
 
       {/* Create Campaign Form */}
       {showCreateForm && (
-        <div style={{
-          backgroundColor: 'white',
-          border: '2px solid #e3f2fd',
-          borderRadius: '8px',
-          padding: '30px',
-          marginBottom: '20px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ marginTop: 0, color: '#000', marginBottom: '20px' }}>
-            🚀 Create New Campaign
-          </h3>
+        <div className="campaign-form">
+          <h3>🚀 Create New Campaign</h3>
 
           {/* Campaign Name & Description */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+          <div className="campaign-form-grid">
             <div>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px', 
-                fontWeight: '500', 
-                color: '#000' 
-              }}>
+              <label className="campaign-form-label">
                 Campaign Name *:
               </label>
               <input
@@ -411,25 +361,12 @@ export default function Campaigns() {
                 value={campaignName}
                 onChange={(e) => setCampaignName(e.target.value)}
                 placeholder="Enter campaign name..."
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #ddd',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: 'white',
-                  color: '#000'
-                }}
+                className="campaign-form-input"
               />
             </div>
 
             <div>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px', 
-                fontWeight: '500', 
-                color: '#000' 
-              }}>
+              <label className="campaign-form-label">
                 Campaign Description:
               </label>
               <input
@@ -437,102 +374,59 @@ export default function Campaigns() {
                 value={campaignDescription}
                 onChange={(e) => setCampaignDescription(e.target.value)}
                 placeholder="Enter campaign description..."
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #ddd',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: 'white',
-                  color: '#000'
-                }}
+                className="campaign-form-input"
               />
             </div>
           </div>
           
           {/* Email Bodies Selection */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: '500', 
-              color: '#000' 
-            }}>
+          <div className="campaign-form-section">
+            <label className="campaign-form-label">
               📧 Select Email Bodies ({selectedEmailBodies.length} selected):
             </label>
             
             {emailBodies.length === 0 ? (
-              <div style={{
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '4px',
-                padding: '12px',
-                color: '#856404'
-              }}>
-                <p style={{ margin: 0 }}>
+              <div className="campaign-warning-box">
+                <p className="campaign-warning-text">
                   ⚠️ No email bodies found. Please create an email body first in the Email Body Editor.
                 </p>
               </div>
             ) : (
               <div>
-                <div style={{ marginBottom: '15px' }}>
+                <div className="campaign-button-container">
                   <button
                     type="button"
                     onClick={handleSelectAllBodies}
-                    style={{
-                      backgroundColor: '#17a2b8',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '8px 16px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
+                    className="campaign-selection-btn-all"
                   >
                     {selectedEmailBodies.length === emailBodies.length ? 'Deselect All' : 'Select All'} Bodies
                   </button>
                 </div>
 
-                <div style={{
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  border: '2px solid #ddd',
-                  borderRadius: '6px',
-                  backgroundColor: 'white'
-                }}>
+                <div className="campaign-selection-list">
                   {emailBodies.map((body) => (
                     <div
                       key={body._id}
-                      style={{
-                        padding: '12px',
-                        borderBottom: '1px solid #eee',
-                        cursor: 'pointer',
-                        backgroundColor: selectedEmailBodies.includes(body._id) ? '#e3f2fd' : 'white'
-                      }}
+                      className="campaign-selection-item"
                       onClick={() => handleEmailBodyToggle(body._id)}
                     >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <div className="campaign-selection-checkbox">
                         <input
                           type="checkbox"
                           checked={selectedEmailBodies.includes(body._id)}
                           onChange={() => handleEmailBodyToggle(body._id)}
-                          style={{ 
-                            marginTop: '2px',
-                            cursor: 'pointer',
-                            transform: 'scale(1.2)'
-                          }}
+                          className="campaign-checkbox"
                         />
-                        <div style={{ flex: 1, color: '#000' }}>
-                          <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
-                            {body.Name || 'Untitled'}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.4' }}>
-                            {body.bodyContent ? 
-                              body.bodyContent.substring(0, 100) + '...' : 
-                              'No content available'
-                            }
-                          </div>
+                      </div>
+                      <div className="campaign-selection-content">
+                        <div className="campaign-selection-title">
+                          {body.name || 'Untitled'}
+                        </div>
+                        <div className="campaign-selection-preview">
+                          {body.content ? 
+                            body.content.substring(0, 100) + '...' : 
+                            'No content available'
+                          }
                         </div>
                       </div>
                     </div>
@@ -543,103 +437,62 @@ export default function Campaigns() {
           </div>
 
           {/* Segments Selection */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: '500', 
-              color: '#000' 
-            }}>
+          <div className="campaign-form-section">
+            <label className="campaign-form-label">
               🎯 Select Target Segments ({selectedSegments.length} selected):
             </label>
             
             {segments.length === 0 ? (
-              <div style={{
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '4px',
-                padding: '12px',
-                color: '#856404'
-              }}>
-                <p style={{ margin: 0 }}>
+              <div className="campaign-warning-box">
+                <p className="campaign-warning-text">
                   ⚠️ No segments found. Please create segments first in the Contact Manager.
                 </p>
               </div>
             ) : (
               <div>
-                <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="campaign-segments-header">
                   <button
                     type="button"
                     onClick={handleSelectAllSegments}
-                    style={{
-                      backgroundColor: '#17a2b8',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '8px 16px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
+                    className="campaign-selection-btn-segments"
                   >
                     {selectedSegments.length === segments.length ? 'Deselect All' : 'Select All'} Segments
                   </button>
                   
                   {selectedSegments.length > 0 && (
-                    <div style={{ fontSize: '14px', color: '#4caf50', fontWeight: 'bold' }}>
+                    <div className="campaign-recipients-count">
                       📊 Total Recipients: {calculateTotalRecipients().length} (deduplicated)
                     </div>
                   )}
                 </div>
 
-                <div style={{
-                  maxHeight: '250px',
-                  overflowY: 'auto',
-                  border: '2px solid #ddd',
-                  borderRadius: '6px',
-                  backgroundColor: 'white'
-                }}>
+                <div className="campaign-selection-list">
                   {segments.map((segment) => (
                     <div
                       key={segment._id}
-                      style={{
-                        padding: '12px',
-                        borderBottom: '1px solid #eee',
-                        cursor: 'pointer',
-                        backgroundColor: selectedSegments.includes(segment._id) ? '#e8f5e8' : 'white'
-                      }}
+                      className="campaign-selection-item"
                       onClick={() => handleSegmentToggle(segment._id)}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className="campaign-selection-checkbox">
                         <input
                           type="checkbox"
                           checked={selectedSegments.includes(segment._id)}
                           onChange={() => handleSegmentToggle(segment._id)}
-                          style={{ 
-                            cursor: 'pointer',
-                            transform: 'scale(1.2)'
-                          }}
+                          className="campaign-checkbox"
                         />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <div style={{ fontWeight: '600', fontSize: '14px', color: '#000', marginBottom: '2px' }}>
-                                🎯 {segment.name}
-                              </div>
-                              <div style={{ fontSize: '12px', color: '#666' }}>
-                                {segment.description || 'No description'}
-                              </div>
+                      </div>
+                      <div className="campaign-selection-content">
+                        <div className="campaign-segment-header-flex">
+                          <div>
+                            <div className="campaign-segment-name">
+                              🎯 {segment.name}
                             </div>
-                            <div style={{ 
-                              backgroundColor: '#4caf50', 
-                              color: 'white', 
-                              padding: '4px 8px', 
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              {getContactCount(segment)} contacts
+                            <div className="campaign-segment-description">
+                              {segment.description || 'No description'}
                             </div>
+                          </div>
+                          <div className="campaign-contacts-badge">
+                            {getContactCount(segment)} contacts
                           </div>
                         </div>
                       </div>
@@ -652,32 +505,26 @@ export default function Campaigns() {
 
           {/* Campaign Summary */}
           {selectedEmailBodies.length > 0 && selectedSegments.length > 0 && (
-            <div style={{
-              backgroundColor: '#f0f8f0',
-              border: '2px solid #4caf50',
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px'
-            }}>
-              <h4 style={{ margin: '0 0 15px 0', color: '#2e7d32' }}>
+            <div className="campaign-summary">
+              <h4 className="campaign-summary-title">
                 🎯 Campaign Summary
               </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>EMAIL BODIES</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2e7d32' }}>
+              <div className="campaign-summary-grid">
+                <div className="campaign-summary-item">
+                  <div className="campaign-summary-label">EMAIL BODIES</div>
+                  <div className="campaign-summary-value">
                     {selectedEmailBodies.length}
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>TARGET SEGMENTS</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2e7d32' }}>
+                <div className="campaign-summary-item">
+                  <div className="campaign-summary-label">TARGET SEGMENTS</div>
+                  <div className="campaign-summary-value">
                     {selectedSegments.length}
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>TOTAL RECIPIENTS</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2e7d32' }}>
+                <div className="campaign-summary-item">
+                  <div className="campaign-summary-label">TOTAL RECIPIENTS</div>
+                  <div className="campaign-summary-value">
                     {calculateTotalRecipients().length}
                   </div>
                 </div>
@@ -686,35 +533,17 @@ export default function Campaigns() {
           )}
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="campaign-action-buttons">
             <button
               onClick={handleSubmitCampaign}
               disabled={!campaignName.trim() || selectedEmailBodies.length === 0 || selectedSegments.length === 0}
-              style={{
-                backgroundColor: !campaignName.trim() || selectedEmailBodies.length === 0 || selectedSegments.length === 0 ? '#ccc' : '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '12px 24px',
-                fontSize: '14px',
-                cursor: !campaignName.trim() || selectedEmailBodies.length === 0 || selectedSegments.length === 0 ? 'not-allowed' : 'pointer',
-                fontWeight: '500'
-              }}
+              className="campaign-btn-submit"
             >
               🚀 Create Campaign ({calculateTotalRecipients().length} recipients)
             </button>
             <button
               onClick={handleCancelCreate}
-              style={{
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '12px 24px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
+              className="campaign-btn-cancel"
             >
               Cancel
             </button>
@@ -726,101 +555,57 @@ export default function Campaigns() {
       {!showCreateForm && (
         <div>
           {campaigns.length === 0 ? (
-            <div style={{ 
-              backgroundColor: '#f8f9fa', 
-              padding: '40px', 
-              borderRadius: '8px', 
-              textAlign: 'center',
-              border: '2px dashed #dee2e6'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚀</div>
-              <h3 style={{ margin: '0 0 12px 0', color: '#000' }}>No campaigns yet</h3>
-              <p style={{ margin: '0 0 20px 0', color: '#000', fontSize: '16px' }}>
+            <div className="campaign-empty-state">
+              <div className="campaign-empty-icon">🚀</div>
+              <h3 className="campaign-empty-title">No campaigns yet</h3>
+              <p className="campaign-empty-description">
                 Create your first email campaign to start reaching your audience segments
               </p>
               <button
                 onClick={handleCreateCampaign}
-                style={{
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '10px 24px',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontWeight: '500'
-                }}
+                className="campaign-empty-btn"
               >
                 Get Started
               </button>
             </div>
           ) : (
             <div>
-              <h3 style={{ color: 'white', marginBottom: '20px' }}>
+              <h3 className="campaign-list-title">
                 Your Campaigns ({campaigns.length})
               </h3>
               
               {campaigns.map((campaign) => (
-                <div key={campaign.id} style={{
-                  backgroundColor: 'white',
-                  border: campaign.status === 'Sent' ? '2px solid #28a745' : '1px solid #e0e0e0',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  marginBottom: '20px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}>
+                <div key={campaign.id} className={`campaign-card${campaign.status === 'Sent' ? ' campaign-card-sent' : ''}`}>
                   {/* Campaign Header */}
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'flex-start',
-                    marginBottom: '15px' 
-                  }}>
+                  <div className="campaign-card-header">
                     <div>
-                      <h4 style={{ margin: '0 0 5px 0', color: '#000', fontSize: '18px' }}>
+                      <h4 className="campaign-card-title">
                         🚀 {campaign.name}
                       </h4>
-                      <p style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>
+                      <p className="campaign-card-description">
                         {campaign.description}
                       </p>
-                      <div style={{ fontSize: '12px', color: '#888', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                      <div className="campaign-card-meta">
                         <span>📅 Created: {new Date(campaign.createdAt).toLocaleDateString()}</span>
-                        <span>📊 Status: <span style={{ 
-                          color: campaign.status === 'Sent' ? '#28a745' : campaign.status === 'Ready to Send' ? '#007bff' : '#ffc107',
-                          fontWeight: '500'
-                        }}>{campaign.status}</span></span>
+                        <span className={`campaign-card-status campaign-status-${campaign.status === 'Sent' ? 'sent' : campaign.status === 'Ready to Send' ? 'ready' : 'draft'}`}>
+                          📊 Status: {campaign.status}
+                        </span>
                         {campaign.sentCount > 0 && <span>📧 Sent to: {campaign.sentCount} recipients</span>}
                         {campaign.sentAt && <span>⏰ Sent: {new Date(campaign.sentAt).toLocaleDateString()}</span>}
                       </div>
                     </div>
                     
                     {/* Action Buttons */}
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <div className="campaign-card-actions">
                       {sendingCampaign === campaign.id ? (
-                        <div style={{
-                          backgroundColor: '#ff9800',
-                          color: 'white',
-                          padding: '8px 16px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500'
-                        }}>
+                        <div className="campaign-card-sending">
                           📤 Sending...
                         </div>
                       ) : (
                         <button
                           onClick={() => handleSendCampaign(campaign.id)}
                           disabled={campaign.status === 'Sent' || !campaign.recipients || campaign.recipients.length === 0}
-                          style={{
-                            backgroundColor: campaign.status === 'Sent' || !campaign.recipients || campaign.recipients.length === 0 ? '#ccc' : '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '8px 16px',
-                            fontSize: '12px',
-                            cursor: campaign.status === 'Sent' || !campaign.recipients || campaign.recipients.length === 0 ? 'not-allowed' : 'pointer',
-                            fontWeight: '500'
-                          }}
+                          className="campaign-card-btn-send"
                         >
                           {campaign.status === 'Sent' ? '✅ Sent' : `📤 Send Now (${campaign.recipients ? campaign.recipients.length : 0})`}
                         </button>
@@ -828,32 +613,14 @@ export default function Campaigns() {
                       
                       <button
                         onClick={() => handleDuplicateCampaign(campaign.id)}
-                        style={{
-                          backgroundColor: '#6f42c1',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '8px 12px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          fontWeight: '500'
-                        }}
+                        className="campaign-card-btn-duplicate"
                       >
                         📋
                       </button>
                       
                       <button
                         onClick={() => handleDeleteCampaign(campaign.id)}
-                        style={{
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '8px 12px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          fontWeight: '500'
-                        }}
+                        className="campaign-card-btn-delete"
                       >
                         🗑️
                       </button>
@@ -861,28 +628,21 @@ export default function Campaigns() {
                   </div>
 
                   {/* Campaign Content Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div className="campaign-card-content-grid">
                     {/* Email Bodies */}
-                    <div>
-                      <h5 style={{ margin: '0 0 10px 0', color: '#000', fontSize: '14px' }}>
+                    <div className="campaign-card-section">
+                      <h5 className="campaign-card-section-title">
                         📧 Email Bodies ({campaign.emailBodies ? campaign.emailBodies.length : 0}):
                       </h5>
-                      <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      <div className="campaign-card-items-list">
                         {campaign.emailBodies && campaign.emailBodies.map((body) => (
-                          <div key={body._id} style={{
-                            backgroundColor: '#f8f9fa',
-                            border: '1px solid #e9ecef',
-                            borderRadius: '4px',
-                            padding: '8px',
-                            fontSize: '12px',
-                            marginBottom: '8px'
-                          }}>
-                            <div style={{ fontWeight: '600', color: '#000', marginBottom: '2px' }}>
-                              {body.Name || 'Untitled'}
+                          <div key={body._id} className="campaign-card-item">
+                            <div className="campaign-card-item-name">
+                              {body.name || 'Untitled'}
                             </div>
-                            <div style={{ color: '#666', lineHeight: '1.4' }}>
-                              {body.bodyContent ? 
-                                body.bodyContent.substring(0, 80) + '...' : 
+                            <div className="campaign-card-item-preview">
+                              {body.content ? 
+                                body.content.substring(0, 80) + '...' : 
                                 'No content'
                               }
                             </div>
@@ -892,39 +652,22 @@ export default function Campaigns() {
                     </div>
 
                     {/* Target Segments */}
-                    <div>
-                      <h5 style={{ margin: '0 0 10px 0', color: '#000', fontSize: '14px' }}>
+                    <div className="campaign-card-section">
+                      <h5 className="campaign-card-section-title">
                         🎯 Target Segments ({campaign.segments ? campaign.segments.length : 0}):
                       </h5>
-                      <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      <div className="campaign-card-items-list">
                         {campaign.segments && campaign.segments.map((segment) => (
-                          <div key={segment._id} style={{
-                            backgroundColor: '#e8f5e8',
-                            border: '1px solid #4caf50',
-                            borderRadius: '4px',
-                            padding: '8px',
-                            fontSize: '12px',
-                            marginBottom: '8px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
+                          <div key={segment._id} className="campaign-segment-item">
                             <div>
-                              <div style={{ fontWeight: '600', color: '#2e7d32' }}>
+                              <div className="campaign-segment-item-name">
                                 {segment.name}
                               </div>
-                              <div style={{ color: '#4caf50', fontSize: '11px' }}>
+                              <div className="campaign-segment-item-desc">
                                 {segment.description || 'No description'}
                               </div>
                             </div>
-                            <div style={{ 
-                              backgroundColor: '#4caf50', 
-                              color: 'white', 
-                              padding: '2px 6px', 
-                              borderRadius: '8px',
-                              fontSize: '10px',
-                              fontWeight: 'bold'
-                            }}>
+                            <div className="campaign-segment-item-count">
                               {getContactCount(segment)}
                             </div>
                           </div>
@@ -934,44 +677,38 @@ export default function Campaigns() {
                   </div>
 
                   {/* Campaign Statistics */}
-                  <div style={{
-                    marginTop: '15px',
-                    padding: '15px',
-                    backgroundColor: campaign.status === 'Sent' ? '#d4edda' : '#e3f2fd',
-                    borderRadius: '6px',
-                    border: `1px solid ${campaign.status === 'Sent' ? '#4caf50' : '#2196f3'}`
-                  }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '15px' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: campaign.status === 'Sent' ? '#2e7d32' : '#1976d2' }}>
+                  <div className="campaign-card-stats">
+                    <div className="campaign-card-stats-grid">
+                      <div className="campaign-card-stat-item">
+                        <div className="campaign-card-stat-value">
                           {campaign.recipients ? campaign.recipients.length : 0}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>
+                        <div className="campaign-card-stat-label">
                           Recipients
                         </div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: campaign.status === 'Sent' ? '#2e7d32' : '#1976d2' }}>
+                      <div className="campaign-card-stat-item">
+                        <div className="campaign-card-stat-value">
                           {campaign.emailBodies ? campaign.emailBodies.length : 0}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>
+                        <div className="campaign-card-stat-label">
                           Email Bodies
                         </div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: campaign.status === 'Sent' ? '#2e7d32' : '#1976d2' }}>
+                      <div className="campaign-card-stat-item">
+                        <div className="campaign-card-stat-value">
                           {campaign.segments ? campaign.segments.length : 0}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>
+                        <div className="campaign-card-stat-label">
                           Segments
                         </div>
                       </div>
                       {campaign.status === 'Sent' && (
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2e7d32' }}>
+                        <div className="campaign-card-stat-item">
+                          <div className="campaign-card-stat-value">
                             100%
                           </div>
-                          <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>
+                          <div className="campaign-card-stat-label">
                             Delivered
                           </div>
                         </div>

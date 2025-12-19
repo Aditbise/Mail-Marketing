@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useState } from 'react';
 import Dashboard from './components/Dashboard';
 import Campaigns from './components/Campaigns.jsx';
 import Sidebar from './components/Sidebar';
@@ -23,18 +24,18 @@ function shouldShowSignup() {
   return diffDays > 15;
 }
 
-// Layout component to reduce repetition
-const DashboardLayout = ({ children }) => (
-  <div style={{ display: 'flex', minHeight: '100vh' }}>
-    <Sidebar />
-    <main style={{ flexGrow: 1, padding: '20px' }}>
-      {children}
-    </main>
-  </div>
-);
-
 function App() {
   const showSignup = shouldShowSignup();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const DashboardLayout = ({ children }) => (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <main style={{ flexGrow: 1, padding: '20px' }}>
+        {children}
+      </main>
+    </div>
+  );
 
   return (
     <BrowserRouter>
@@ -47,7 +48,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
         <Route path="/campaigns" element={<DashboardLayout><Campaigns /></DashboardLayout>} />
         <Route path="/email-builder" element={<DashboardLayout><EmailBuilder /></DashboardLayout>} />
-        <Route path="/email-body-editor" element={<DashboardLayout><EmailBodyEditor /></DashboardLayout>} /> {/* Add this route */}
+        <Route path="/email-body-editor" element={<DashboardLayout><EmailBodyEditor /></DashboardLayout>} />
         <Route path="/email-lists" element={<DashboardLayout><EmailLists /></DashboardLayout>} />
         <Route path="/segments" element={<DashboardLayout><Segmants /></DashboardLayout>} />
         <Route path="/email-templates" element={<DashboardLayout><EmailTemplates /></DashboardLayout>} />

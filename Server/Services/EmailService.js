@@ -14,6 +14,18 @@ class EmailService {
   async sendCampaignEmails(campaign) {
     console.log(`🚀 Starting campaign: ${campaign.name}`);
     console.log(`📧 Sending to ${campaign.recipients.length} recipients via Brevo HTTP API`);
+    console.log(`📝 Email bodies count: ${campaign.emailBodies.length}`);
+    
+    if (campaign.emailBodies.length > 0) {
+      console.log('📝 First email body structure:', {
+        name: campaign.emailBodies[0].name,
+        subject: campaign.emailBodies[0].subject,
+        fromEmail: campaign.emailBodies[0].fromEmail,
+        fromName: campaign.emailBodies[0].fromName,
+        hasContent: !!campaign.emailBodies[0].content,
+        contentLength: campaign.emailBodies[0].content?.length || 0
+      });
+    }
     
     const results = [];
     let successCount = 0;
@@ -23,27 +35,42 @@ class EmailService {
       for (const emailBody of campaign.emailBodies) {
         try {
           const personalizedContent = this.personalizeEmail(
-            emailBody.bodyContent, 
+            emailBody.content, 
             recipient, 
             campaign.companyInfo
           );
           
+          console.log(`\n📧 EMAIL CONTENT DEBUG for ${recipient.email}:`);
+          console.log(`Content type: ${typeof personalizedContent}`);
+          console.log(`Content length: ${personalizedContent.length}`);
+          console.log(`First 200 chars: ${personalizedContent.substring(0, 200)}`);
+          console.log(`Contains HTML tags: ${/<[^>]+>/.test(personalizedContent)}`);
+          
           // Brevo API payload
           const emailData = {
             sender: {
-              name: campaign.companyInfo?.name || 'Final Year Project',
-              email: process.env.BREVO_EMAIL
+              name: emailBody.fromName || campaign.companyInfo?.name || 'Final Year Project',
+              email: emailBody.fromEmail || process.env.BREVO_EMAIL
             },
             to: [{
               email: recipient.email,
               name: recipient.name || 'Valued Customer'
             }],
-            subject: emailBody.Name || 'Newsletter from Final Year Project',
+            subject: emailBody.subject || 'Newsletter from Final Year Project',
             htmlContent: personalizedContent,
-            textContent: this.stripHtml(personalizedContent)
+            textContent: this.stripHtml(personalizedContent),
+            // Add headers to improve deliverability
+            headers: {
+              'List-Unsubscribe': `<mailto:${campaign.companyInfo?.email || 'noreply@company.com'}>`
+            }
           };
 
-          console.log(`📤 Sending to: ${recipient.email}`);
+          console.log(`\n📤 Sending Brevo payload:`);
+          console.log(`  To: ${emailData.to[0].email}`);
+          console.log(`  From: ${emailData.sender.email}`);
+          console.log(`  Subject: ${emailData.subject}`);
+          console.log(`  HTML Content Length: ${emailData.htmlContent.length}`);
+          console.log(`  Has HTML: ${emailData.htmlContent.includes('<')}`);
           
           const response = await axios.post(this.brevoApiUrl, emailData, {
             headers: this.headers
@@ -58,7 +85,7 @@ class EmailService {
           });
           
           successCount++;
-          console.log(`✅ Sent successfully to: ${recipient.email} (ID: ${response.data.messageId})`);
+          console.log(`✅ Sent successfully to: ${recipient.email} (ID: ${response.data.messageId})\n`);
           
           // Small delay to be respectful to API
           await new Promise(resolve => setTimeout(resolve, 100));
