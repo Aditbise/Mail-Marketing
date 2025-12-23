@@ -2,6 +2,21 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import '../index.css';
 
+const escapeHtml = (text) => {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+};
+
+const textToHtml = (text) => {
+  return escapeHtml(text).replace(/\n/g, '<br>');
+};
+
 export default function EmailBodyEditor() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -82,17 +97,6 @@ export default function EmailBodyEditor() {
 
   return (
     <div className="email-body-editor-main-container">
-      {/* DEBUG: Show Company Info Status */}
-      <div style={{ backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px', padding: '10px', marginBottom: '10px', fontSize: '12px', color: '#856404' }}>
-        <strong>Debug - Company Info:</strong> {companyInfo ? (
-          <span>
-            Loaded - Name: {companyInfo.companyName}, Email: {companyInfo.email}, Website: {companyInfo.website || '(none)'}, Logo: {companyInfo.logo ? '✓ Present' : '✗ Missing'}
-          </span>
-        ) : (
-          <span>Loading or not available...</span>
-        )}
-      </div>
-      {/* Templates List + Preview */}
       <div className="email-body-editor-templates-layout-wrapper">
         <div className="email-body-editor-templates-list-sidebar">
           <div className="email-body-editor-templates-list-header">
@@ -122,21 +126,14 @@ export default function EmailBodyEditor() {
           </div>
         </div>
 
-        {/* Template Preview Card */}
         {previewTemplate && (
           <div className="email-body-editor-templates-preview-container">
             <div className="email-body-editor-templates-preview-card">
               <h2>{previewTemplate.name}</h2>
-              <p>{previewTemplate.description}</p>
-              
-              {previewTemplate.preview && (
-                <div className="email-body-editor-template-preview-content">
-                  <p className="email-body-editor-preview-label">Preview:</p>
-                  <div className="email-body-editor-template-card-preview-large">
-                    {previewTemplate.preview}
-                  </div>
-                </div>
-              )}
+              <p style={{ margin: '10px 0', color: '#999' }}><strong>Subject:</strong> {previewTemplate.subject}</p>
+              <p style={{ margin: '10px 0', color: '#bbb', fontSize: '13px' }}>
+                <strong>Description:</strong> {previewTemplate.description ? (previewTemplate.description.length > 80 ? previewTemplate.description.substring(0, 80) + '...' : previewTemplate.description) : 'No description'}
+              </p>
               
               <div className="email-body-editor-template-card-actions">
                 <button 
@@ -161,7 +158,6 @@ export default function EmailBodyEditor() {
         )}
       </div>
 
-      {/* Templates Table */}
       <div className="email-body-editor-templates-table-section">
         <h3>All Templates</h3>
         <div className="email-body-editor-templates-table-wrapper">
@@ -230,7 +226,7 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
     fromEmail: '',
     replyTo: '',
     content: '<h2>Welcome to our service!</h2><p>Click the button below to get started.</p>',
-    signature: 'Best regards,<br><strong>Your Company Team</strong>',
+    signature: 'Best regards,\nYour Company Team',
     category: 'promotional',
     tags: ''
   });
@@ -255,7 +251,6 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
     <div className="email-body-editor-modal-overlay">
       <div style={{ backgroundColor: 'rgb(73, 73, 73)', borderRadius: '8px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)', width: '95vw', maxHeight: '90vh', display: 'flex', animation: 'slideIn 0.3s ease-out', overflow: 'hidden', flexDirection: 'column' }}>
         
-        {/* Modal Header */}
         <div style={{ padding: '20px 30px', borderBottom: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, fontSize: '22px' }}>Create New Template</h2>
           <button 
@@ -268,10 +263,8 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
           </button>
         </div>
 
-        {/* Modal Content - Split Layout */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           
-          {/* Left Side - Form */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px', borderRight: '1px solid #444' }}>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               
@@ -321,8 +314,8 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>Signature</label>
-                <textarea name="signature" value={formData.signature} onChange={handleChange} placeholder="Email signature" rows="3" style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white', resize: 'vertical' }} />
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>Signature (plain text)</label>
+                <textarea name="signature" value={formData.signature} onChange={handleChange} placeholder="e.g., Best regards, Your Name" rows="3" style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white', resize: 'vertical' }} />
               </div>
 
               <div>
@@ -337,13 +330,10 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
             </form>
           </div>
 
-          {/* Right Side - Live Email Preview */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: '#2a2a2a', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <h3 style={{ color: '#90caf9', marginTop: 0, marginBottom: '15px', alignSelf: 'flex-start', fontSize: '14px' }}>📧 Email Preview (600px)</h3>
             
             <div style={{ width: '600px', maxWidth: '100%', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #ddd', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              
-              {/* Email Top Banner with Logo */}
               <div style={{ backgroundColor: '#f9f9f9', padding: '20px', textAlign: 'center', borderBottom: '1px solid #e0e0e0' }}>
                 {companyInfo?.logo ? (
                   <img src={companyInfo.logo.startsWith('http') ? companyInfo.logo : `http://localhost:3001${companyInfo.logo}`} alt="Company Logo" style={{ maxHeight: '50px', maxWidth: '200px', marginBottom: '10px' }} />
@@ -355,26 +345,22 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
                 </p>
               </div>
               
-              {/* Email Header */}
               <div style={{ backgroundColor: '#f5f5f5', padding: '15px 20px', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
                 <div style={{ marginBottom: '8px' }}><strong>From:</strong> {formData.fromName || 'Sender'} &lt;{formData.fromEmail || 'email@example.com'}&gt;</div>
                 <div><strong>Subject:</strong> {formData.subject || 'Email Subject'}</div>
               </div>
               
-              {/* Email Body */}
               <div style={{ padding: '30px 20px', flex: 1, overflowY: 'auto', maxHeight: '400px', fontFamily: 'Arial, sans-serif' }}>
                 <div style={{ color: '#333', fontSize: '14px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: formData.content || '<p>Email content will appear here</p>' }} />
               </div>
               
-              {/* Email Footer */}
               <div style={{ backgroundColor: '#f0f0f0', padding: '20px', borderTop: '1px solid #e0e0e0', fontSize: '11px', color: '#666', textAlign: 'center' }}>
                 {formData.signature && (
                   <div style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #ddd' }}>
-                    <div dangerouslySetInnerHTML={{ __html: formData.signature }} />
+                    <div dangerouslySetInnerHTML={{ __html: textToHtml(formData.signature) }} />
                   </div>
                 )}
                 
-                {/* Company Info Links */}
                 <div style={{ lineHeight: '1.8' }}>
                   {companyInfo?.website && (
                     <div style={{ marginBottom: '8px' }}>
@@ -386,7 +372,6 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
                       <a href={`mailto:${companyInfo.email}`} style={{ color: '#0066cc', textDecoration: 'none' }}>{companyInfo.email}</a>
                     </div>
                   )}
-                  {/* Social Links */}
                   <div style={{ marginTop: '10px', marginBottom: '10px', fontSize: '12px' }}>
                     {companyInfo?.socialLinks?.facebook && (
                       <a href={companyInfo.socialLinks.facebook} style={{ color: '#0066cc', textDecoration: 'none', marginRight: '10px' }} target="_blank" rel="noopener noreferrer">Facebook</a>
@@ -463,7 +448,6 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
     <div className="email-body-editor-modal-overlay">
       <div style={{ backgroundColor: 'rgb(73, 73, 73)', borderRadius: '8px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)', width: '95vw', maxHeight: '90vh', display: 'flex', animation: 'slideIn 0.3s ease-out', overflow: 'hidden', flexDirection: 'column' }}>
       
-      {/* Modal Header */}
       <div style={{ padding: '20px 30px', borderBottom: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
           <button onClick={onBack} style={{ padding: '8px 16px', backgroundColor: '#666', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}>← Back</button>
@@ -472,10 +456,8 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
         <button onClick={() => { if (confirm(`Delete "${formData.name}"?`)) { onDelete(template._id); onBack(); } }} style={{ padding: '8px 16px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}>🗑️ Delete</button>
       </div>
 
-      {/* Modal Content - Split Layout */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* Left Side - Form */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px', borderRight: '1px solid #444' }}>
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             
@@ -525,7 +507,7 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>Signature</label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>Signature (plain text)</label>
               <textarea name="signature" value={formData.signature} onChange={handleChange} rows="3" style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white', resize: 'vertical' }} />
             </div>
 
@@ -541,13 +523,10 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
           </form>
         </div>
 
-        {/* Right Side - Live Email Preview */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px', backgroundColor: '#2a2a2a', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <h3 style={{ color: '#90caf9', marginTop: 0, marginBottom: '15px', alignSelf: 'flex-start', fontSize: '14px' }}>📧 Email Preview (600px)</h3>
           
           <div style={{ width: '600px', maxWidth: '100%', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #ddd', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            
-            {/* Email Top Banner with Logo */}
             <div style={{ backgroundColor: '#f9f9f9', padding: '20px', textAlign: 'center', borderBottom: '1px solid #e0e0e0' }}>
               {companyInfo?.logo ? (
                 <img src={companyInfo.logo.startsWith('http') ? companyInfo.logo : `http://localhost:3001${companyInfo.logo}`} alt="Company Logo" style={{ maxHeight: '50px', maxWidth: '200px', marginBottom: '10px' }} />
@@ -559,26 +538,22 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
               </p>
             </div>
             
-            {/* Email Header */}
             <div style={{ backgroundColor: '#f5f5f5', padding: '15px 20px', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
               <div style={{ marginBottom: '8px' }}><strong>From:</strong> {formData.fromName || 'Sender'} &lt;{formData.fromEmail || 'email@example.com'}&gt;</div>
               <div><strong>Subject:</strong> {formData.subject || 'Email Subject'}</div>
             </div>
             
-            {/* Email Body */}
             <div style={{ padding: '30px 20px', flex: 1, overflowY: 'auto', maxHeight: '400px', fontFamily: 'Arial, sans-serif' }}>
               <div style={{ color: '#333', fontSize: '14px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: formData.content || '<p>Email content will appear here</p>' }} />
             </div>
             
-            {/* Email Footer */}
             <div style={{ backgroundColor: '#f0f0f0', padding: '20px', borderTop: '1px solid #e0e0e0', fontSize: '11px', color: '#666', textAlign: 'center' }}>
               {formData.signature && (
                 <div style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #ddd' }}>
-                  <div dangerouslySetInnerHTML={{ __html: formData.signature }} />
+                  <div dangerouslySetInnerHTML={{ __html: textToHtml(formData.signature) }} />
                 </div>
               )}
               
-              {/* Company Info Links */}
               <div style={{ lineHeight: '1.8' }}>
                 {companyInfo && companyInfo.website ? (
                   <div style={{ marginBottom: '8px' }}>
@@ -590,7 +565,6 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
                     <a href={`mailto:${companyInfo.email}`} style={{ color: '#0066cc', textDecoration: 'none' }}>{companyInfo.email}</a>
                   </div>
                 ) : null}
-                {/* Social Links */}
                 <div style={{ marginTop: '10px', marginBottom: '10px', fontSize: '12px' }}>
                   {companyInfo?.socialLinks?.facebook && (
                     <a href={companyInfo.socialLinks.facebook} style={{ color: '#0066cc', textDecoration: 'none', marginRight: '10px' }} target="_blank" rel="noopener noreferrer">Facebook</a>
