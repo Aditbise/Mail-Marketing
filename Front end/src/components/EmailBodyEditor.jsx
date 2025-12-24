@@ -7,6 +7,71 @@ const textToHtml = (text) => {
   return text.replace(/[&<>"']/g, (char) => map[char]).replace(/\n/g, '<br>');
 };
 
+const FORM_FIELDS = [
+  { name: 'name', label: 'Template Name *', type: 'text', placeholder: 'e.g., Email Verification' },
+  { name: 'subject', label: 'Email Subject *', type: 'text', placeholder: 'e.g., Verify your email' },
+  { name: 'fromName', label: 'From Name *', type: 'text', placeholder: 'e.g., Company Name' },
+  { name: 'fromEmail', label: 'From Email *', type: 'email', placeholder: 'e.g., noreply@company.com' },
+  { name: 'replyTo', label: 'Reply-To', type: 'email', placeholder: 'e.g., support@company.com' },
+  { name: 'description', label: 'Description', type: 'text', placeholder: 'Template purpose' },
+  { name: 'tags', label: 'Tags', type: 'text', placeholder: 'e.g., welcome, verification' }
+];
+
+const STYLE = {
+  input: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white' },
+  label: { display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' },
+  select: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white' },
+  textarea: { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white', resize: 'vertical' },
+  modalHeader: { padding: '20px 30px', borderBottom: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  modalCloseBtn: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999', transition: 'color 0.2s' },
+  modalContainer: { backgroundColor: 'rgb(73, 73, 73)', borderRadius: '8px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)', width: '95vw', maxHeight: '90vh', display: 'flex', animation: 'slideIn 0.3s ease-out', overflow: 'hidden', flexDirection: 'column' },
+  backBtn: { padding: '8px 16px', backgroundColor: '#666', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' },
+  deleteBtn: { padding: '8px 16px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' },
+  cancelBtn: { flex: 1, padding: '10px', backgroundColor: '#666', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
+  submitBtn: (isSaving) => ({ flex: 1, padding: '10px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: isSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', opacity: isSaving ? 0.6 : 1 })
+};
+
+const validateTemplateForm = (formData) => {
+  if (!formData.name.trim()) return 'Please enter a template name';
+  if (!formData.subject.trim()) return 'Please enter an email subject';
+  if (!formData.fromName.trim()) return 'Please enter a sender name';
+  if (!formData.fromEmail.trim()) return 'Please enter a sender email';
+  if (!formData.content.trim()) return 'Please enter email content';
+  return null;
+};
+
+const formatTags = (tags) => {
+  if (Array.isArray(tags)) return tags;
+  return tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+};
+
+const generateTrackingPixel = (templateId, recipientEmail) => {
+  return `<img src="http://localhost:3001/track/open/${templateId}/${encodeURIComponent(recipientEmail)}" width="1" height="1" alt="" style="display:none;" />`;
+};
+
+const wrapTrackingLink = (url, templateId, recipientEmail) => {
+  return `http://localhost:3001/track/click/${templateId}/${encodeURIComponent(recipientEmail)}?redirect=${encodeURIComponent(url)}`;
+};
+
+// Reusable Modal Header Component
+function ModalHeader({ title, onClose, rightContent }) {
+  return (
+    <div style={STYLE.modalHeader}>
+      <h2 style={{ margin: 0, fontSize: '22px' }}>{title}</h2>
+      {rightContent || (
+        <button 
+          onClick={onClose} 
+          style={STYLE.modalCloseBtn}
+          onMouseOver={(e) => e.target.style.color = '#fff'} 
+          onMouseOut={(e) => e.target.style.color = '#999'}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function EmailBodyEditor() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -28,21 +93,22 @@ export default function EmailBodyEditor() {
   }, []);
 
   const handleCreateTemplate = async (newTemplate) => {
+    const validationError = validateTemplateForm(newTemplate);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
     try {
       const response = await axios.post('http://localhost:3001/email-templates', {
-        name: newTemplate.name,
-        subject: newTemplate.subject,
-        fromName: newTemplate.fromName,
-        fromEmail: newTemplate.fromEmail,
+        ...newTemplate,
         replyTo: newTemplate.replyTo || '',
-        content: newTemplate.content,
         signature: newTemplate.signature || '',
         layout: newTemplate.layout || 'modern',
         preview: newTemplate.preview || '',
-        heroImage: newTemplate.heroImage || null,
         description: newTemplate.description || '',
         category: newTemplate.category || 'promotional',
-        tags: newTemplate.tags ? newTemplate.tags.split(',').map(tag => tag.trim()) : [],
+        tags: formatTags(newTemplate.tags),
         isDefault: false
       });
       
@@ -259,24 +325,16 @@ function TemplateForm({ formData, handleChange, handleSubmit, isSaving, onCancel
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '20px', borderRight: '1px solid #444' }}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        {[
-          { name: 'name', label: 'Template Name *', type: 'text', placeholder: 'e.g., Email Verification' },
-          { name: 'subject', label: 'Email Subject *', type: 'text', placeholder: 'e.g., Verify your email' },
-          { name: 'fromName', label: 'From Name *', type: 'text', placeholder: 'e.g., Company Name' },
-          { name: 'fromEmail', label: 'From Email *', type: 'email', placeholder: 'e.g., noreply@company.com' },
-          { name: 'replyTo', label: 'Reply-To', type: 'email', placeholder: 'e.g., support@company.com' },
-          { name: 'description', label: 'Description', type: 'text', placeholder: 'Template purpose' },
-          { name: 'tags', label: 'Tags', type: 'text', placeholder: 'e.g., welcome, verification' }
-        ].map(field => (
+        {FORM_FIELDS.map(field => (
           <div key={field.name}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>{field.label}</label>
-            <input type={field.type} name={field.name} value={formData[field.name]} onChange={handleChange} placeholder={field.placeholder} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white' }} required={field.label.includes('*')} />
+            <label style={STYLE.label}>{field.label}</label>
+            <input type={field.type} name={field.name} value={formData[field.name]} onChange={handleChange} placeholder={field.placeholder} style={STYLE.input} required={field.label.includes('*')} />
           </div>
         ))}
         
         <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>Category</label>
-          <select name="category" value={formData.category} onChange={handleChange} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white' }}>
+          <label style={STYLE.label}>Category</label>
+          <select name="category" value={formData.category} onChange={handleChange} style={STYLE.select}>
             <option value="promotional">Promotional</option>
             <option value="transactional">Transactional</option>
             <option value="newsletter">Newsletter</option>
@@ -285,18 +343,18 @@ function TemplateForm({ formData, handleChange, handleSubmit, isSaving, onCancel
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>Email Content (HTML) *</label>
-          <textarea name="content" value={formData.content} onChange={handleChange} placeholder="Enter email HTML..." rows="5" style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white', resize: 'vertical' }} required />
+          <label style={STYLE.label}>Email Content (HTML) *</label>
+          <textarea name="content" value={formData.content} onChange={handleChange} placeholder="Enter email HTML..." rows="5" style={STYLE.textarea} required />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'white', fontSize: '14px' }}>Signature (plain text)</label>
-          <textarea name="signature" value={formData.signature} onChange={handleChange} placeholder="e.g., Best regards, Your Name" rows="3" style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#3a3a3a', color: 'white', resize: 'vertical' }} />
+          <label style={STYLE.label}>Signature (plain text)</label>
+          <textarea name="signature" value={formData.signature} onChange={handleChange} placeholder="e.g., Best regards, Your Name" rows="3" style={STYLE.textarea} />
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-          <button type="button" onClick={onCancel} style={{ flex: 1, padding: '10px', backgroundColor: '#666', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
-          <button type="submit" disabled={isSaving} style={{ flex: 1, padding: '10px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', opacity: isSaving ? 0.6 : 1 }}>{isSaving ? 'Saving...' : submitLabel}</button>
+          <button type="button" onClick={onCancel} style={STYLE.cancelBtn}>Cancel</button>
+          <button type="submit" disabled={isSaving} style={STYLE.submitBtn(isSaving)}>{isSaving ? 'Saving...' : submitLabel}</button>
         </div>
       </form>
     </div>
@@ -305,11 +363,11 @@ function TemplateForm({ formData, handleChange, handleSubmit, isSaving, onCancel
 
 // Create Template Modal - Split view with form and live preview
 function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    name: '', description: '', preview: '', layout: 'modern', subject: '',
-    fromName: '', fromEmail: '', replyTo: '', 
+    name: '', subject: '', fromName: '', fromEmail: companyInfo?.email || '', replyTo: '',
     content: '<h2>Welcome to our service!</h2><p>Click the button below to get started.</p>',
-    signature: 'Best regards,\nYour Company Team', category: 'promotional', tags: ''
+    signature: 'Best regards,\nYour Company Team', category: 'promotional', description: '', tags: ''
   });
 
   const handleChange = (e) => {
@@ -317,26 +375,25 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return alert('Please enter a template name');
-    if (!formData.subject.trim()) return alert('Please enter an email subject');
-    if (!formData.fromName.trim()) return alert('Please enter a sender name');
-    if (!formData.fromEmail.trim()) return alert('Please enter a sender email');
-    if (!formData.content.trim()) return alert('Please enter email content');
-    
-    onCreate({ ...formData, tags: formData.tags.split(',').map(tag => tag.trim()) });
+    const validationError = validateTemplateForm(formData);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
+    setIsSaving(true);
+    await onCreate({ ...formData, fromEmail: formData.fromEmail || companyInfo?.email });
+    setIsSaving(false);
   };
 
   return (
     <div className="email-body-editor-modal-overlay">
-      <div style={{ backgroundColor: 'rgb(73, 73, 73)', borderRadius: '8px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)', width: '95vw', maxHeight: '90vh', display: 'flex', animation: 'slideIn 0.3s ease-out', overflow: 'hidden', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 30px', borderBottom: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '22px' }}>Create New Template</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999', transition: 'color 0.2s' }} onMouseOver={(e) => e.target.style.color = '#fff'} onMouseOut={(e) => e.target.style.color = '#999'}>✕</button>
-        </div>
+      <div style={STYLE.modalContainer}>
+        <ModalHeader title="Create New Template" onClose={onClose} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <TemplateForm formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} isSaving={false} onCancel={onClose} submitLabel="Create Template" />
+          <TemplateForm formData={formData} handleChange={handleChange} handleSubmit={handleSubmit} isSaving={isSaving} onCancel={onClose} submitLabel="Create Template" />
           <EmailPreview formData={formData} companyInfo={companyInfo} />
         </div>
       </div>
@@ -347,11 +404,10 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
 // Template Editor - Split view for editing templates
 function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
   const [formData, setFormData] = useState({
-    name: template.name || '', description: template.description || '', preview: template.preview || '',
-    layout: template.layout || 'modern', subject: template.subject || '', fromName: template.fromName || '',
+    name: template.name || '', subject: template.subject || '', fromName: template.fromName || '',
     fromEmail: template.fromEmail || '', replyTo: template.replyTo || '', content: template.content || '',
     signature: template.signature || '', category: template.category || 'promotional',
-    tags: Array.isArray(template.tags) ? template.tags.join(', ') : template.tags || ''
+    description: template.description || '', tags: Array.isArray(template.tags) ? template.tags.join(', ') : template.tags || ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -362,11 +418,17 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const validationError = validateTemplateForm(formData);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
     setIsSaving(true);
     try {
       await axios.put(`http://localhost:3001/email-templates/${template._id}`, {
         ...formData,
-        tags: formData.tags.split(',').map(tag => tag.trim())
+        tags: formatTags(formData.tags)
       });
       alert('Template saved successfully!');
       onBack();
@@ -377,15 +439,22 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
     }
   };
 
+  const handleDeleteTemplate = () => {
+    if (confirm(`Delete "${formData.name}"?`)) {
+      onDelete(template._id);
+      onBack();
+    }
+  };
+
   return (
     <div className="email-body-editor-modal-overlay">
-      <div style={{ backgroundColor: 'rgb(73, 73, 73)', borderRadius: '8px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)', width: '95vw', maxHeight: '90vh', display: 'flex', animation: 'slideIn 0.3s ease-out', overflow: 'hidden', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 30px', borderBottom: '1px solid #555', backgroundColor: '#2a2a2a', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={STYLE.modalContainer}>
+        <div style={STYLE.modalHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
-            <button onClick={onBack} style={{ padding: '8px 16px', backgroundColor: '#666', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}>← Back</button>
+            <button onClick={onBack} style={STYLE.backBtn}>← Back</button>
             <h2 style={{ margin: 0, fontSize: '22px' }}>Edit: {formData.name}</h2>
           </div>
-          <button onClick={() => { if (confirm(`Delete "${formData.name}"?`)) { onDelete(template._id); onBack(); } }} style={{ padding: '8px 16px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}>🗑️ Delete</button>
+          <button onClick={handleDeleteTemplate} style={STYLE.deleteBtn}>🗑️ Delete</button>
         </div>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <TemplateForm formData={formData} handleChange={handleChange} handleSubmit={handleSave} isSaving={isSaving} onCancel={onBack} submitLabel="Save Changes" />
