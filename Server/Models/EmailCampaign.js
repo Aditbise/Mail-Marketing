@@ -4,32 +4,38 @@ const EmailCampaignSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, default: '' },
   
-  // NEW: Multi-email body support
+  // Multi-email body support with sequence tracking
   emailBodies: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'EmailBody' 
   }],
   
-  // NEW: Multi-segment targeting  
+  // NEW: Email body sequence order - specifies the order emails are sent to each recipient
+  emailBodySequence: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'EmailBody' 
+  }],
+  
+  // Multi-segment targeting  
   targetSegments: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Segment' 
   }],
   
-  // NEW: Professional email settings
+  // Professional email settings
   subject: { type: String, required: true },
   fromName: { type: String, required: true },
   fromEmail: { type: String, required: true },
   replyTo: { type: String },
   
-  // NEW: Advanced status management
+  // Advanced status management
   status: { 
     type: String, 
     enum: ['Draft', 'Scheduled', 'Sending', 'Sent', 'Paused'], 
     default: 'Draft' 
   },
   
-  // NEW: Detailed recipient tracking
+  // Detailed recipient tracking
   recipients: [{
     email: String,
     name: String,
@@ -44,10 +50,12 @@ const EmailCampaignSchema = new mongoose.Schema({
     },
     sentAt: Date,
     trackingId: String,
-    errorMessage: String
+    errorMessage: String,
+    // Track which email body in sequence this recipient received
+    emailSequenceIndex: { type: Number, default: 0 }
   }],
   
-  // NEW: Email analytics
+  // Email analytics
   analytics: {
     opens: { type: Number, default: 0 },
     uniqueOpens: { type: Number, default: 0 },

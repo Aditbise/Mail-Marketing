@@ -14,16 +14,20 @@ class EmailService {
   async sendCampaignEmails(campaign) {
     console.log(`🚀 Starting campaign: ${campaign.name}`);
     console.log(`📧 Sending to ${campaign.recipients.length} recipients via Brevo HTTP API`);
-    console.log(`📝 Email bodies count: ${campaign.emailBodies.length}`);
     
-    if (campaign.emailBodies.length > 0) {
-      console.log('📝 First email body structure:', {
-        name: campaign.emailBodies[0].name,
-        subject: campaign.emailBodies[0].subject,
-        fromEmail: campaign.emailBodies[0].fromEmail,
-        fromName: campaign.emailBodies[0].fromName,
-        hasContent: !!campaign.emailBodies[0].content,
-        contentLength: campaign.emailBodies[0].content?.length || 0
+    // Use emailBodySequence if available (respects user's email order)
+    // Fall back to emailBodies if sequence not specified
+    const emailSequence = campaign.emailBodySequence && campaign.emailBodySequence.length > 0 
+      ? campaign.emailBodySequence 
+      : campaign.emailBodies;
+    
+    console.log(`📝 Email bodies count: ${emailSequence.length}`);
+    console.log(`📋 Using email sequence: ${campaign.emailBodySequence && campaign.emailBodySequence.length > 0 ? 'YES (from user selection)' : 'NO (using default order)'}`);
+    
+    if (emailSequence.length > 0) {
+      console.log('📝 Email sequence order:', {
+        count: emailSequence.length,
+        names: emailSequence.map((body, idx) => `${idx + 1}. ${body.name || 'Untitled'}`).join(' → ')
       });
     }
     
@@ -32,7 +36,9 @@ class EmailService {
     let failCount = 0;
     
     for (const recipient of campaign.recipients) {
-      for (const emailBody of campaign.emailBodies) {
+      // Send each email in the sequence to the recipient
+      for (let sequenceIndex = 0; sequenceIndex < emailSequence.length; sequenceIndex++) {
+        const emailBody = emailSequence[sequenceIndex];
         try {
           const personalizedContent = this.personalizeEmail(
             emailBody.content, 
@@ -40,7 +46,8 @@ class EmailService {
             campaign.companyInfo
           );
           
-          console.log(`\n📧 EMAIL CONTENT DEBUG for ${recipient.email}:`);
+          console.log(`\n📧 Sending email #${sequenceIndex + 1} of ${emailSequence.length} to ${recipient.email}:`);
+          console.log(`  Body: ${emailBody.name || 'Untitled'}`);
           console.log(`Content type: ${typeof personalizedContent}`);
           console.log(`Content length: ${personalizedContent.length}`);
           console.log(`First 200 chars: ${personalizedContent.substring(0, 200)}`);

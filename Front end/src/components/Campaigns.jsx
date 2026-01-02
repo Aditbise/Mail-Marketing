@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 // ============================================================================
-// CONSTANTS
+// CONSTANTS & STYLES
 // ============================================================================
 
 const API_BASE_URL = 'http://localhost:3001';
@@ -29,6 +29,98 @@ const VALIDATION_MESSAGES = {
   testEmail: 'Please enter a valid email address'
 };
 
+const COLORS = {
+  dark_bg: '#1a1a1a',
+  dark_panel: '#2a3f3f',
+  dark_light: '#1a2a2a',
+  accent_blue: '#4299e1',
+  danger_red: '#f56565',
+  text_primary: '#ffffff',
+  text_secondary: '#b0b0b0',
+  text_tertiary: '#808080',
+  text_disabled: '#444',
+  border_color: '#333',
+  border_light: '#444'
+};
+
+const SECTION_HEADER_STYLE = {
+  color: COLORS.text_secondary,
+  fontSize: '12px',
+  textTransform: 'uppercase',
+  fontWeight: '600',
+  marginBottom: '12px'
+};
+
+const SEQUENCE_NUMBER_STYLE = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '36px',
+  height: '36px',
+  backgroundColor: COLORS.accent_blue,
+  color: COLORS.text_primary,
+  borderRadius: '50%',
+  fontSize: '14px',
+  fontWeight: 'bold',
+  flexShrink: 0
+};
+
+const SMALL_SEQUENCE_NUMBER_STYLE = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '24px',
+  height: '24px',
+  backgroundColor: COLORS.accent_blue,
+  color: COLORS.text_primary,
+  borderRadius: '50%',
+  fontSize: '11px',
+  fontWeight: 'bold',
+  flexShrink: 0
+};
+
+const EMPTY_STATE_STYLE = {
+  backgroundColor: COLORS.dark_light,
+  borderRadius: '8px',
+  padding: '20px',
+  textAlign: 'center',
+  color: COLORS.text_tertiary,
+  border: `1px dashed ${COLORS.border_light}`
+};
+
+const BUTTON_STYLE = {
+  base: {
+    padding: '6px 10px',
+    color: COLORS.text_primary,
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '11px',
+    fontWeight: '600'
+  },
+  primary: {
+    backgroundColor: COLORS.accent_blue
+  },
+  danger: {
+    backgroundColor: COLORS.danger_red
+  },
+  disabled: {
+    backgroundColor: COLORS.text_disabled,
+    cursor: 'not-allowed',
+    opacity: 0.5
+  }
+};
+
+const SEQUENCE_ITEM_STYLE = {
+  backgroundColor: COLORS.dark_panel,
+  border: `1px solid ${COLORS.accent_blue}`,
+  borderRadius: '8px',
+  padding: '16px',
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '12px'
+};
+
 export default function Campaigns() {
   // ========== STATE ==========
   const [campaigns, setCampaigns] = useState([]);
@@ -53,6 +145,29 @@ export default function Campaigns() {
   useEffect(() => {
     persistCampaigns();
   }, [campaigns]);
+
+  // Clean up sequence duplicates if they exist
+  useEffect(() => {
+    // Remove any duplicates from emailBodySequence
+    const seen = new Set();
+    const cleanedSequence = emailBodySequence.filter(bodyId => {
+      if (seen.has(bodyId)) {
+        return false;
+      }
+      seen.add(bodyId);
+      return true;
+    });
+    
+    if (cleanedSequence.length !== emailBodySequence.length) {
+      setEmailBodySequence(cleanedSequence);
+    }
+    
+    // Sync selectedEmailBodies with sequence (remove items not in sequence)
+    const validBodies = selectedEmailBodies.filter(bodyId => cleanedSequence.includes(bodyId));
+    if (validBodies.length !== selectedEmailBodies.length) {
+      setSelectedEmailBodies(validBodies);
+    }
+  }, [emailBodySequence, selectedEmailBodies]);
 
   // ========== API & DATA FUNCTIONS ==========
   const initializeData = useCallback(async () => {
@@ -180,16 +295,34 @@ export default function Campaigns() {
   }, []);
 
   const handleEmailBodyToggle = useCallback((bodyId) => {
-    if (selectedEmailBodies.includes(bodyId)) {
-      // Remove from selection
-      setSelectedEmailBodies(prev => prev.filter(id => id !== bodyId));
-      setEmailBodySequence(prev => prev.filter(id => id !== bodyId));
-    } else {
-      // Add to selection with sequence
-      setSelectedEmailBodies(prev => [...prev, bodyId]);
-      setEmailBodySequence(prev => [...prev, bodyId]);
-    }
-  }, [selectedEmailBodies]);
+    setSelectedEmailBodies(prev => {
+      // Check if body is currently selected
+      const isCurrentlySelected = prev.includes(bodyId);
+      
+      if (isCurrentlySelected) {
+        // Remove from selected bodies
+        const updatedBodies = prev.filter(id => id !== bodyId);
+        // Also remove from sequence
+        setEmailBodySequence(prevSeq => prevSeq.filter(id => id !== bodyId));
+        return updatedBodies;
+      } else {
+        // Add to selected bodies (avoid duplicates)
+        if (!prev.includes(bodyId)) {
+          const updatedBodies = [...prev, bodyId];
+          // Add to sequence (check for duplicates before adding)
+          setEmailBodySequence(prevSeq => {
+            // Ensure no duplicates exist
+            if (!prevSeq.includes(bodyId)) {
+              return [...prevSeq, bodyId];
+            }
+            return prevSeq;
+          });
+          return updatedBodies;
+        }
+        return prev;
+      }
+    });
+  }, []);
 
   const handleMoveBodyUp = useCallback((bodyId) => {
     const currentIndex = emailBodySequence.indexOf(bodyId);
@@ -217,10 +350,26 @@ export default function Campaigns() {
 
   const handleSelectAllBodies = useCallback(() => {
     const allBodyIds = emailBodies.map(body => body._id);
-    setSelectedEmailBodies(
-      selectedEmailBodies.length === emailBodies.length ? [] : allBodyIds
-    );
-  }, [selectedEmailBodies, emailBodies]);
+    
+    if (selectedEmailBodies.length === emailBodies.length) {
+      // Deselect all
+      setSelectedEmailBodies([]);
+      setEmailBodySequence([]);
+    } else {
+      // Select all - maintain existing sequence and add new ones
+      setSelectedEmailBodies(allBodyIds);
+      setEmailBodySequence(prevSeq => {
+        // Add only new bodies to the sequence
+        const newSequence = [...prevSeq];
+        allBodyIds.forEach(bodyId => {
+          if (!newSequence.includes(bodyId)) {
+            newSequence.push(bodyId);
+          }
+        });
+        return newSequence;
+      });
+    }
+  }, [selectedEmailBodies.length, emailBodies]);
 
   const handleSelectAllSegments = useCallback(() => {
     const allSegmentIds = segments.map(segment => segment._id);
@@ -228,6 +377,14 @@ export default function Campaigns() {
       selectedSegments.length === segments.length ? [] : allSegmentIds
     );
   }, [selectedSegments, segments]);
+
+  const handleSegmentToggle = useCallback((segmentId) => {
+    setSelectedSegments(prev => 
+      prev.includes(segmentId)
+        ? prev.filter(id => id !== segmentId)
+        : [...prev, segmentId]
+    );
+  }, []);
 
   // ========== CAMPAIGN CREATION ==========
   const handleSubmitCampaign = useCallback(() => {
@@ -446,118 +603,142 @@ export default function Campaigns() {
                 </p>
               </div>
             ) : (
-              <div>
-                <div className="campaign-button-container">
-                  <button
-                    type="button"
-                    onClick={handleSelectAllBodies}
-                    className="campaign-selection-btn-all"
-                  >
-                    {selectedEmailBodies.length === emailBodies.length ? 'Deselect All' : 'Select All'} Bodies
-                  </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                {/* ===== LEFT: AVAILABLE BODIES ===== */}
+                <div>
+                  <h5 style={SECTION_HEADER_STYLE}>
+                    Available Email Bodies
+                  </h5>
+                  <div className="campaign-button-container">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllBodies}
+                      className="campaign-selection-btn-all"
+                    >
+                      {selectedEmailBodies.length === emailBodies.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  </div>
+
+                  <div className="campaign-selection-list">
+                    {emailBodies.map((body) => {
+                      const isSelected = selectedEmailBodies.includes(body._id);
+                      
+                      return (
+                        <div
+                          key={body._id}
+                          className="campaign-selection-item"
+                          onClick={() => handleEmailBodyToggle(body._id)}
+                          style={{
+                            backgroundColor: isSelected ? COLORS.dark_panel : 'transparent',
+                            borderLeft: isSelected ? `4px solid ${COLORS.accent_blue}` : 'none',
+                            cursor: 'pointer',
+                            opacity: isSelected ? 0.7 : 1
+                          }}
+                        >
+                          <div className="campaign-selection-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleEmailBodyToggle(body._id)}
+                              className="campaign-checkbox"
+                            />
+                          </div>
+                          <div className="campaign-selection-content">
+                            <div className="campaign-selection-title">
+                              {body.name || 'Untitled'}
+                            </div>
+                            <div className="campaign-selection-preview">
+                              {body.content ? 
+                                body.content.substring(0, 80) + '...' : 
+                                'No content available'
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="campaign-selection-list">
-                  {emailBodies.map((body) => {
-                    const isSelected = selectedEmailBodies.includes(body._id);
-                    const sequenceNumber = getBodySequenceNumber(body._id);
-                    const currentIndex = emailBodySequence.indexOf(body._id);
-                    
-                    return (
-                      <div
-                        key={body._id}
-                        className="campaign-selection-item"
-                        style={{
-                          backgroundColor: isSelected ? '#2a3f3f' : 'transparent',
-                          borderLeft: isSelected ? '4px solid #4299e1' : 'none',
-                          position: 'relative'
-                        }}
-                      >
-                        {/* Sequence Badge */}
-                        {isSelected && (
+                {/* ===== RIGHT: SELECTED SEQUENCE ===== */}
+                <div>
+                  <h5 style={SECTION_HEADER_STYLE}>
+                    Email Send Sequence ({emailBodySequence.length})
+                  </h5>
+                  
+                  {emailBodySequence.length === 0 ? (
+                    <div style={EMPTY_STATE_STYLE}>
+                      <p style={{ margin: '0', fontSize: '14px' }}>
+                        Select email bodies from the left to add them to the sequence
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {emailBodySequence.map((bodyId, idx) => {
+                        const body = emailBodies.find(b => b._id === bodyId);
+                        const isFirst = idx === 0;
+                        const isLast = idx === emailBodySequence.length - 1;
+                        
+                        return (
                           <div
-                            className="campaign-sequence-badge"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '32px',
-                              height: '32px',
-                              backgroundColor: '#4299e1',
-                              color: 'white',
-                              borderRadius: '50%',
-                              fontWeight: 'bold',
-                              fontSize: '14px',
-                              marginRight: '12px'
-                            }}
+                            key={bodyId}
+                            style={SEQUENCE_ITEM_STYLE}
                           >
-                            {sequenceNumber}
+                            <div style={SEQUENCE_NUMBER_STYLE}>
+                              {idx + 1}
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                              <div style={{ color: COLORS.text_primary, fontWeight: '600', marginBottom: '4px' }}>
+                                {body?.name || 'Untitled'}
+                              </div>
+                              <div style={{ fontSize: '12px', color: COLORS.text_tertiary }}>
+                                {body?.content ? 
+                                  body.content.substring(0, 60) + '...' : 
+                                  'No content'
+                                }
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                              <button
+                                onClick={() => handleMoveBodyUp(bodyId)}
+                                disabled={isFirst}
+                                style={{
+                                  ...BUTTON_STYLE.base,
+                                  ...(isFirst ? BUTTON_STYLE.disabled : BUTTON_STYLE.primary)
+                                }}
+                                title="Move up in sequence"
+                              >
+                                Up
+                              </button>
+                              <button
+                                onClick={() => handleMoveBodyDown(bodyId)}
+                                disabled={isLast}
+                                style={{
+                                  ...BUTTON_STYLE.base,
+                                  ...(isLast ? BUTTON_STYLE.disabled : BUTTON_STYLE.primary)
+                                }}
+                                title="Move down in sequence"
+                              >
+                                Down
+                              </button>
+                              <button
+                                onClick={() => handleEmailBodyToggle(bodyId)}
+                                style={{
+                                  ...BUTTON_STYLE.base,
+                                  ...BUTTON_STYLE.danger
+                                }}
+                                title="Remove from sequence"
+                              >
+                                Remove
+                              </button>
+                            </div>
                           </div>
-                        )}
-                        
-                        <div className="campaign-selection-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleEmailBodyToggle(body._id)}
-                            className="campaign-checkbox"
-                          />
-                        </div>
-                        
-                        <div className="campaign-selection-content" style={{ flex: 1 }}>
-                          <div className="campaign-selection-title">
-                            {body.name || 'Untitled'}
-                          </div>
-                          <div className="campaign-selection-preview">
-                            {body.content ? 
-                              body.content.substring(0, 100) + '...' : 
-                              'No content available'
-                            }
-                          </div>
-                        </div>
-                        
-                        {/* Sequence Control Buttons */}
-                        {isSelected && (
-                          <div style={{ display: 'flex', gap: '4px', marginLeft: '12px' }}>
-                            <button
-                              onClick={() => handleMoveBodyUp(body._id)}
-                              disabled={currentIndex === 0}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: currentIndex === 0 ? '#555' : '#4299e1',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
-                                fontSize: '12px',
-                                fontWeight: '600'
-                              }}
-                              title="Move up"
-                            >
-                              Up
-                            </button>
-                            <button
-                              onClick={() => handleMoveBodyDown(body._id)}
-                              disabled={currentIndex === emailBodySequence.length - 1}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: currentIndex === emailBodySequence.length - 1 ? '#555' : '#4299e1',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: currentIndex === emailBodySequence.length - 1 ? 'not-allowed' : 'pointer',
-                                fontSize: '12px',
-                                fontWeight: '600'
-                              }}
-                              title="Move down"
-                            >
-                              Down
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -640,13 +821,13 @@ export default function Campaigns() {
               {/* Email Bodies Sequence Display */}
               {emailBodySequence.length > 0 && (
                 <div style={{
-                  backgroundColor: '#1a2a2a',
+                  backgroundColor: COLORS.dark_light,
                   padding: '16px',
                   borderRadius: '8px',
                   marginBottom: '16px',
-                  borderLeft: '4px solid #4299e1'
+                  borderLeft: `4px solid ${COLORS.accent_blue}`
                 }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#b0b0b0', marginBottom: '12px', textTransform: 'uppercase' }}>
+                  <div style={SECTION_HEADER_STYLE}>
                     Email Send Sequence
                   </div>
                   {emailBodySequence.map((bodyId, idx) => {
@@ -657,24 +838,13 @@ export default function Campaigns() {
                         alignItems: 'center',
                         gap: '12px',
                         padding: '8px 0',
-                        borderBottom: idx < emailBodySequence.length - 1 ? '1px solid #333' : 'none'
+                        borderBottom: idx < emailBodySequence.length - 1 ? `1px solid ${COLORS.border_color}` : 'none'
                       }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          minWidth: '28px',
-                          height: '28px',
-                          backgroundColor: '#4299e1',
-                          color: 'white',
-                          borderRadius: '50%',
-                          fontSize: '12px',
-                          fontWeight: 'bold'
-                        }}>
+                        <div style={SMALL_SEQUENCE_NUMBER_STYLE}>
                           {idx + 1}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ color: '#ffffff', fontSize: '14px', fontWeight: '600' }}>
+                          <div style={{ color: COLORS.text_primary, fontSize: '14px', fontWeight: '600' }}>
                             {body?.name || 'Untitled'}
                           </div>
                         </div>
@@ -818,19 +988,7 @@ export default function Campaigns() {
                             alignItems: 'flex-start',
                             gap: '12px'
                           }}>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '24px',
-                              height: '24px',
-                              backgroundColor: '#4299e1',
-                              color: 'white',
-                              borderRadius: '50%',
-                              fontSize: '11px',
-                              fontWeight: 'bold',
-                              flexShrink: 0
-                            }}>
+                            <div style={SMALL_SEQUENCE_NUMBER_STYLE}>
                               {idx + 1}
                             </div>
                             <div style={{ flex: 1 }}>
