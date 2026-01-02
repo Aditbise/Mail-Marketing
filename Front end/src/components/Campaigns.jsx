@@ -1,300 +1,360 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const API_BASE_URL = 'http://localhost:3001';
+const ENDPOINTS = {
+  emailTemplates: `${API_BASE_URL}/email-templates`,
+  segments: `${API_BASE_URL}/segments`,
+  companyInfo: `${API_BASE_URL}/company-info`,
+  sendCampaign: `${API_BASE_URL}/send-campaign`,
+  sendTestEmail: `${API_BASE_URL}/send-test-email`
+};
+
+const CAMPAIGN_STATUS = {
+  DRAFT: 'Draft',
+  READY: 'Ready to Send',
+  SENT: 'Sent'
+};
+
+const VALIDATION_MESSAGES = {
+  campaignName: 'Please enter a campaign name',
+  emailBodies: 'Please select at least one email body for the campaign',
+  segments: 'Please select at least one segment for the campaign',
+  recipients: 'No recipients found in the selected segments',
+  companyInfo: 'Company information is required to send campaigns. Please update your company info.',
+  testEmail: 'Please enter a valid email address'
+};
+
 export default function Campaigns() {
+  // ========== STATE ==========
   const [campaigns, setCampaigns] = useState([]);
   const [emailBodies, setEmailBodies] = useState([]);
   const [segments, setSegments] = useState([]);
   const [companyInfo, setCompanyInfo] = useState(null);
   const [selectedEmailBodies, setSelectedEmailBodies] = useState([]);
+  const [emailBodySequence, setEmailBodySequence] = useState([]);
   const [selectedSegments, setSelectedSegments] = useState([]);
   const [campaignName, setCampaignName] = useState('');
   const [campaignDescription, setCampaignDescription] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingCampaign, setSendingCampaign] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Fetch data on component mount and load saved campaigns
+  // ========== EFFECTS ==========
   useEffect(() => {
-    fetchEmailBodies();
-    fetchSegments();
-    fetchCompanyInfo();
-    loadSavedCampaigns();
+    initializeData();
   }, []);
 
-  // Save campaigns to localStorage whenever campaigns change
   useEffect(() => {
-    if (campaigns.length > 0) {
-      localStorage.setItem('emailCampaigns', JSON.stringify(campaigns));
-    }
+    persistCampaigns();
   }, [campaigns]);
 
-  const loadSavedCampaigns = () => {
+  // ========== API & DATA FUNCTIONS ==========
+  const initializeData = useCallback(async () => {
+    await Promise.all([
+      fetchEmailBodies(),
+      fetchSegments(),
+      fetchCompanyInfo(),
+      loadSavedCampaigns()
+    ]);
+  }, []);
+
+  const loadSavedCampaigns = useCallback(() => {
     try {
       const savedCampaigns = localStorage.getItem('emailCampaigns');
       if (savedCampaigns) {
-        const parsedCampaigns = JSON.parse(savedCampaigns);
-        setCampaigns(parsedCampaigns);
+        setCampaigns(JSON.parse(savedCampaigns));
       }
     } catch (error) {
       console.error('Error loading saved campaigns:', error);
+      setError('Failed to load campaigns');
     }
-  };
+  }, []);
 
-  const fetchEmailBodies = async () => {
+  const fetchEmailBodies = useCallback(async () => {
     try {
-      // Fetch email templates instead of email bodies
-      const response = await axios.get('http://localhost:3001/email-templates');
+      const response = await axios.get(ENDPOINTS.emailTemplates);
       setEmailBodies(response.data || []);
     } catch (error) {
       console.error('Error fetching email templates:', error);
       setEmailBodies([]);
     }
-  };
+  }, []);
 
-  const fetchSegments = async () => {
+  const fetchSegments = useCallback(async () => {
     try {
-      const response = await axios.get('http://localhost:3001/segments');
+      const response = await axios.get(ENDPOINTS.segments);
       setSegments(response.data || []);
     } catch (error) {
       console.error('Error fetching segments:', error);
       setSegments([]);
     }
-  };
+  }, []);
 
-  const fetchCompanyInfo = async () => {
+  const fetchCompanyInfo = useCallback(async () => {
     try {
-      const response = await axios.get('http://localhost:3001/company-info');
+      const response = await axios.get(ENDPOINTS.companyInfo);
       setCompanyInfo(response.data);
     } catch (error) {
       console.error('Error fetching company info:', error);
     }
-  };
+  }, []);
 
-  // Calculate total unique recipients from selected segments
-  const calculateTotalRecipients = (segmentIds = selectedSegments) => {
+  const persistCampaigns = useCallback(() => {
+    if (campaigns.length > 0) {
+      localStorage.setItem('emailCampaigns', JSON.stringify(campaigns));
+    } else {
+      localStorage.removeItem('emailCampaigns');
+    }
+  }, [campaigns]);
+
+  // ========== MEMOIZED CALCULATIONS ==========
+  const calculateTotalRecipients = useCallback((segmentIds = selectedSegments) => {
+    const emailSet = new Set();
     const allContacts = [];
+    
     segmentIds.forEach(segmentId => {
       const segment = segments.find(s => s._id === segmentId);
-      if (segment && segment.contacts && Array.isArray(segment.contacts)) {
+      if (segment?.contacts && Array.isArray(segment.contacts)) {
         segment.contacts.forEach(contact => {
-          // Avoid duplicates by checking email
-          if (contact && contact.email && !allContacts.find(c => c.email === contact.email)) {
+          if (contact?.email && !emailSet.has(contact.email)) {
+            emailSet.add(contact.email);
             allContacts.push(contact);
           }
         });
       }
     });
     return allContacts;
-  };
+  }, [selectedSegments, segments]);
 
-  const handleCreateCampaign = () => {
-    setShowCreateForm(true);
-  };
+  const getContactCount = useCallback((segment) => {
+    return segment?.contacts && Array.isArray(segment.contacts) ? segment.contacts.length : 0;
+  }, []);
 
-  const handleCancelCreate = () => {
-    setShowCreateForm(false);
+  const totalRecipients = useMemo(() => calculateTotalRecipients(), [calculateTotalRecipients]);
+
+  const isFormValid = useMemo(() => ({
+    name: campaignName.trim().length > 0,
+    bodies: selectedEmailBodies.length > 0,
+    segments: selectedSegments.length > 0
+  }), [campaignName, selectedEmailBodies, selectedSegments]);
+
+  // ========== FORM MANAGEMENT ==========
+  const resetFormState = useCallback(() => {
     setSelectedEmailBodies([]);
     setSelectedSegments([]);
     setCampaignName('');
     setCampaignDescription('');
-  };
+    setError(null);
+  }, []);
 
-  const handleEmailBodyToggle = (bodyId) => {
-    setSelectedEmailBodies(prev => 
-      prev.includes(bodyId) 
-        ? prev.filter(id => id !== bodyId)
-        : [...prev, bodyId]
+  const validateCampaignForm = useCallback(() => {
+    if (!campaignName.trim()) return VALIDATION_MESSAGES.campaignName;
+    if (selectedEmailBodies.length === 0) return VALIDATION_MESSAGES.emailBodies;
+    if (selectedSegments.length === 0) return VALIDATION_MESSAGES.segments;
+    return null;
+  }, [campaignName, selectedEmailBodies, selectedSegments]);
+
+  const handleCreateCampaign = useCallback(() => {
+    setShowCreateForm(true);
+    setError(null);
+  }, []);
+
+  const handleCancelCreate = useCallback(() => {
+    setShowCreateForm(false);
+    resetFormState();
+  }, [resetFormState]);
+
+  // ========== SELECTION HANDLERS ==========
+  const toggleSelection = useCallback((id, selected, setSelected) => {
+    setSelected(prev => 
+      prev.includes(id) 
+        ? prev.filter(item => item !== id)
+        : [...prev, id]
     );
-  };
+  }, []);
 
-  const handleSegmentToggle = (segmentId) => {
-    setSelectedSegments(prev => 
-      prev.includes(segmentId) 
-        ? prev.filter(id => id !== segmentId)
-        : [...prev, segmentId]
+  const handleEmailBodyToggle = useCallback((bodyId) => {
+    if (selectedEmailBodies.includes(bodyId)) {
+      // Remove from selection
+      setSelectedEmailBodies(prev => prev.filter(id => id !== bodyId));
+      setEmailBodySequence(prev => prev.filter(id => id !== bodyId));
+    } else {
+      // Add to selection with sequence
+      setSelectedEmailBodies(prev => [...prev, bodyId]);
+      setEmailBodySequence(prev => [...prev, bodyId]);
+    }
+  }, [selectedEmailBodies]);
+
+  const handleMoveBodyUp = useCallback((bodyId) => {
+    const currentIndex = emailBodySequence.indexOf(bodyId);
+    if (currentIndex > 0) {
+      const newSequence = [...emailBodySequence];
+      [newSequence[currentIndex], newSequence[currentIndex - 1]] = 
+      [newSequence[currentIndex - 1], newSequence[currentIndex]];
+      setEmailBodySequence(newSequence);
+    }
+  }, [emailBodySequence]);
+
+  const handleMoveBodyDown = useCallback((bodyId) => {
+    const currentIndex = emailBodySequence.indexOf(bodyId);
+    if (currentIndex < emailBodySequence.length - 1) {
+      const newSequence = [...emailBodySequence];
+      [newSequence[currentIndex], newSequence[currentIndex + 1]] = 
+      [newSequence[currentIndex + 1], newSequence[currentIndex]];
+      setEmailBodySequence(newSequence);
+    }
+  }, [emailBodySequence]);
+
+  const getBodySequenceNumber = useCallback((bodyId) => {
+    return emailBodySequence.indexOf(bodyId) + 1;
+  }, [emailBodySequence]);
+
+  const handleSelectAllBodies = useCallback(() => {
+    const allBodyIds = emailBodies.map(body => body._id);
+    setSelectedEmailBodies(
+      selectedEmailBodies.length === emailBodies.length ? [] : allBodyIds
     );
-  };
+  }, [selectedEmailBodies, emailBodies]);
 
-  const handleSelectAllBodies = () => {
-    if (selectedEmailBodies.length === emailBodies.length) {
-      setSelectedEmailBodies([]);
-    } else {
-      setSelectedEmailBodies(emailBodies.map(body => body._id));
-    }
-  };
+  const handleSelectAllSegments = useCallback(() => {
+    const allSegmentIds = segments.map(segment => segment._id);
+    setSelectedSegments(
+      selectedSegments.length === segments.length ? [] : allSegmentIds
+    );
+  }, [selectedSegments, segments]);
 
-  const handleSelectAllSegments = () => {
-    if (selectedSegments.length === segments.length) {
-      setSelectedSegments([]);
-    } else {
-      setSelectedSegments(segments.map(segment => segment._id));
-    }
-  };
-
-  const handleSubmitCampaign = () => {
-    if (!campaignName.trim()) {
-      alert('Please enter a campaign name');
+  // ========== CAMPAIGN CREATION ==========
+  const handleSubmitCampaign = useCallback(() => {
+    const validationError = validateCampaignForm();
+    if (validationError) {
+      setError(validationError);
+      alert(validationError);
       return;
     }
+
+    // Get email bodies in the selected sequence order
+    const selectedBodies = emailBodySequence.map(bodyId => 
+      emailBodies.find(body => body._id === bodyId)
+    ).filter(Boolean);
     
-    if (selectedEmailBodies.length === 0) {
-      alert('Please select at least one email body for the campaign');
-      return;
-    }
-
-    if (selectedSegments.length === 0) {
-      alert('Please select at least one segment for the campaign');
-      return;
-    }
-    
-    const selectedBodies = emailBodies.filter(body => selectedEmailBodies.includes(body._id));
     const selectedSegmentObjects = segments.filter(segment => selectedSegments.includes(segment._id));
-    const totalRecipients = calculateTotalRecipients();
-    
-    // Create new campaign object
+
     const newCampaign = {
       id: Date.now().toString(),
       name: campaignName.trim(),
       description: campaignDescription.trim() || 'No description provided',
       emailBodies: selectedBodies,
+      emailBodySequence: emailBodySequence,
       segments: selectedSegmentObjects,
       recipients: totalRecipients,
       createdAt: new Date(),
-      status: 'Ready to Send',
+      status: CAMPAIGN_STATUS.READY,
       sentCount: 0,
       companyInfo: companyInfo
     };
-    
-    // Add to campaigns list
-    setCampaigns(prev => [...prev, newCampaign]);
-    
-    console.log('Created campaign:', newCampaign);
-    alert(`Campaign "${campaignName}" created successfully! Ready to send to ${totalRecipients.length} recipients across ${selectedSegments.length} segments.`);
-    
-    // Reset form
-    setShowCreateForm(false);
-    setSelectedEmailBodies([]);
-    setSelectedSegments([]);
-    setCampaignName('');
-    setCampaignDescription('');
-  };
 
-  // ONE-CLICK CAMPAIGN SEND
-  const handleSendCampaign = async (campaignId) => {
+    setCampaigns(prev => [...prev, newCampaign]);
+    alert(`Campaign "${campaignName}" created successfully! Email bodies will be sent in sequence (${emailBodySequence.length} emails per recipient).`);
+    setShowCreateForm(false);
+    resetFormState();
+    setEmailBodySequence([]);
+  }, [campaignName, campaignDescription, selectedEmailBodies, selectedSegments, emailBodies, emailBodySequence, segments, totalRecipients, companyInfo, validateCampaignForm, resetFormState]);
+
+  // ========== CAMPAIGN SEND ==========
+  const validateCampaignSend = useCallback((campaign) => {
+    if (campaign.status === CAMPAIGN_STATUS.SENT) return 'This campaign has already been sent';
+    if (!campaign.recipients?.length) return VALIDATION_MESSAGES.recipients;
+    if (!campaign.companyInfo) return VALIDATION_MESSAGES.companyInfo;
+    return null;
+  }, []);
+
+  const sendCampaignToServer = useCallback(async (campaign) => {
+    const response = await axios.post(ENDPOINTS.sendCampaign, { campaign });
+    if (!response.data.success) throw new Error(response.data.message || 'Campaign sending failed');
+    return response.data.data;
+  }, []);
+
+  const updateCampaignStatus = useCallback((campaignId, recipientCount) => {
+    setCampaigns(prev => prev.map(c => 
+      c.id === campaignId 
+        ? { 
+            ...c, 
+            status: CAMPAIGN_STATUS.SENT, 
+            sentCount: recipientCount,
+            sentAt: new Date(),
+            deliveryStatus: 'Completed'
+          }
+        : c
+    ));
+  }, []);
+
+  const handleSendCampaign = useCallback(async (campaignId) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
 
-    if (campaign.status === 'Sent') {
-      alert('This campaign has already been sent!');
+    const validationError = validateCampaignSend(campaign);
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
-    if (!campaign.recipients || campaign.recipients.length === 0) {
-      alert('No recipients found in the selected segments.');
-      return;
-    }
-
-    if (!campaign.companyInfo) {
-      alert('Company information is required to send campaigns. Please update your company info.');
-      return;
-    }
-
-    // Confirm send
-    const confirmMessage = `Send campaign "${campaign.name}" to ${campaign.recipients.length} recipients across ${campaign.segments.length} segments?`;
+    const confirmMessage = `Send campaign "${campaign.name}" to ${campaign.recipients.length} recipients?`;
     if (!window.confirm(confirmMessage)) return;
 
     setSendingCampaign(campaignId);
 
     try {
-      // Simulate campaign sending (replace with actual email sending logic)
-      await simulateCampaignSend(campaign);
-      
-      // Update campaign status
-      setCampaigns(prev => prev.map(c => 
-        c.id === campaignId 
-          ? { 
-              ...c, 
-              status: 'Sent', 
-              sentCount: campaign.recipients.length,
-              sentAt: new Date(),
-              deliveryStatus: 'Completed'
-            }
-          : c
-      ));
-
-      alert(`✅ Campaign "${campaign.name}" sent successfully to ${campaign.recipients.length} recipients!`);
-      
+      await sendCampaignToServer(campaign);
+      updateCampaignStatus(campaignId, campaign.recipients.length);
+      alert(`Campaign "${campaign.name}" sent successfully to ${campaign.recipients.length} recipients!`);
     } catch (error) {
       console.error('Campaign send error:', error);
-      alert('❌ Failed to send campaign: ' + error.message);
+      alert(`Failed to send campaign: ${error.message}`);
     } finally {
       setSendingCampaign(null);
     }
-  };
+  }, [campaigns, validateCampaignSend, sendCampaignToServer, updateCampaignStatus]);
 
-  // Simulate campaign sending (replace with actual email service)
-  const simulateCampaignSend = async (campaign) => {
-    try {
-      console.log('🚀 Sending real campaign emails...');
-      
-      const response = await axios.post('http://localhost:3001/send-campaign', {
-        campaign: campaign
-      });
-      
-      if (response.data.success) {
-        console.log('✅ Campaign sent successfully:', response.data.data.summary);
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || 'Campaign sending failed');
-      }
-      
-    } catch (error) {
-      console.error('❌ Campaign send error:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to send campaign');
-    }
-  };
-
-  const handleSendTestEmail = async () => {
+  // ========== TEST EMAIL & CAMPAIGN MANAGEMENT ==========
+  const handleSendTestEmail = useCallback(async () => {
     const email = prompt('Enter test email address:');
     if (!email) return;
     
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/send-test-email', {
-        email: email,
+      const response = await axios.post(ENDPOINTS.sendTestEmail, {
+        email,
         subject: 'Final Year Project - Email System Test'
       });
       
       if (response.data.success) {
-        alert(`✅ Test email sent successfully to ${email}!`);
+        alert(`Test email sent successfully to ${email}!`);
       } else {
-        alert(`❌ Failed to send test email: ${response.data.message}`);
+        alert(`Failed to send test email: ${response.data.message}`);
       }
     } catch (error) {
-      alert(`❌ Error sending test email: ${error.response?.data?.message || error.message}`);
+      alert(`Error sending test email: ${error.response?.data?.message || error.message}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleDeleteCampaign = (campaignId) => {
+  const handleDeleteCampaign = useCallback((campaignId) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
     
     if (window.confirm(`Are you sure you want to delete campaign "${campaign.name}"?`)) {
       setCampaigns(prev => prev.filter(c => c.id !== campaignId));
-      // Also remove from localStorage
-      const updatedCampaigns = campaigns.filter(c => c.id !== campaignId);
-      if (updatedCampaigns.length === 0) {
-        localStorage.removeItem('emailCampaigns');
-      } else {
-        localStorage.setItem('emailCampaigns', JSON.stringify(updatedCampaigns));
-      }
     }
-  };
+  }, [campaigns]);
 
-  const handleDuplicateCampaign = (campaignId) => {
+  const handleDuplicateCampaign = useCallback((campaignId) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
 
@@ -302,7 +362,7 @@ export default function Campaigns() {
       ...campaign,
       id: Date.now().toString(),
       name: `${campaign.name} (Copy)`,
-      status: 'Ready to Send',
+      status: CAMPAIGN_STATUS.READY,
       sentCount: 0,
       sentAt: null,
       deliveryStatus: null,
@@ -311,21 +371,15 @@ export default function Campaigns() {
 
     setCampaigns(prev => [...prev, duplicatedCampaign]);
     alert(`Campaign duplicated as "${duplicatedCampaign.name}"`);
-  };
-
-  // Helper function to get contact count safely
-  const getContactCount = (segment) => {
-    return segment && segment.contacts && Array.isArray(segment.contacts) ? segment.contacts.length : 0;
-  };
+  }, [campaigns]);
 
   return (
     <div className="campaign-container">
       <div className="campaign-header">
         <h1>Email Campaigns</h1>
         <div className="campaign-header-actions">
-          {/* Quick Stats */}
           <div className="campaign-stats">
-            📧 {emailBodies.length} Bodies | 🎯 {segments.length} Segments
+            {emailBodies.length} Bodies | {segments.length} Segments
           </div>
           
           <button
@@ -340,7 +394,7 @@ export default function Campaigns() {
             onClick={handleSendTestEmail}
             className="campaign-btn campaign-btn-test"
           >
-            📧 Send Test Email
+            Send Test Email
           </button>
         </div>
       </div>
@@ -348,7 +402,7 @@ export default function Campaigns() {
       {/* Create Campaign Form */}
       {showCreateForm && (
         <div className="campaign-form">
-          <h3>🚀 Create New Campaign</h3>
+          <h3>Create New Campaign</h3>
 
           {/* Campaign Name & Description */}
           <div className="campaign-form-grid">
@@ -382,13 +436,13 @@ export default function Campaigns() {
           {/* Email Bodies Selection */}
           <div className="campaign-form-section">
             <label className="campaign-form-label">
-              📧 Select Email Bodies ({selectedEmailBodies.length} selected):
+              Email Bodies ({selectedEmailBodies.length} selected):
             </label>
             
             {emailBodies.length === 0 ? (
               <div className="campaign-warning-box">
                 <p className="campaign-warning-text">
-                  ⚠️ No email bodies found. Please create an email body first in the Email Body Editor.
+                  No email bodies found. Please create an email body first in the Email Body Editor.
                 </p>
               </div>
             ) : (
@@ -404,33 +458,106 @@ export default function Campaigns() {
                 </div>
 
                 <div className="campaign-selection-list">
-                  {emailBodies.map((body) => (
-                    <div
-                      key={body._id}
-                      className="campaign-selection-item"
-                      onClick={() => handleEmailBodyToggle(body._id)}
-                    >
-                      <div className="campaign-selection-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selectedEmailBodies.includes(body._id)}
-                          onChange={() => handleEmailBodyToggle(body._id)}
-                          className="campaign-checkbox"
-                        />
-                      </div>
-                      <div className="campaign-selection-content">
-                        <div className="campaign-selection-title">
-                          {body.name || 'Untitled'}
+                  {emailBodies.map((body) => {
+                    const isSelected = selectedEmailBodies.includes(body._id);
+                    const sequenceNumber = getBodySequenceNumber(body._id);
+                    const currentIndex = emailBodySequence.indexOf(body._id);
+                    
+                    return (
+                      <div
+                        key={body._id}
+                        className="campaign-selection-item"
+                        style={{
+                          backgroundColor: isSelected ? '#2a3f3f' : 'transparent',
+                          borderLeft: isSelected ? '4px solid #4299e1' : 'none',
+                          position: 'relative'
+                        }}
+                      >
+                        {/* Sequence Badge */}
+                        {isSelected && (
+                          <div
+                            className="campaign-sequence-badge"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '32px',
+                              height: '32px',
+                              backgroundColor: '#4299e1',
+                              color: 'white',
+                              borderRadius: '50%',
+                              fontWeight: 'bold',
+                              fontSize: '14px',
+                              marginRight: '12px'
+                            }}
+                          >
+                            {sequenceNumber}
+                          </div>
+                        )}
+                        
+                        <div className="campaign-selection-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleEmailBodyToggle(body._id)}
+                            className="campaign-checkbox"
+                          />
                         </div>
-                        <div className="campaign-selection-preview">
-                          {body.content ? 
-                            body.content.substring(0, 100) + '...' : 
-                            'No content available'
-                          }
+                        
+                        <div className="campaign-selection-content" style={{ flex: 1 }}>
+                          <div className="campaign-selection-title">
+                            {body.name || 'Untitled'}
+                          </div>
+                          <div className="campaign-selection-preview">
+                            {body.content ? 
+                              body.content.substring(0, 100) + '...' : 
+                              'No content available'
+                            }
+                          </div>
                         </div>
+                        
+                        {/* Sequence Control Buttons */}
+                        {isSelected && (
+                          <div style={{ display: 'flex', gap: '4px', marginLeft: '12px' }}>
+                            <button
+                              onClick={() => handleMoveBodyUp(body._id)}
+                              disabled={currentIndex === 0}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: currentIndex === 0 ? '#555' : '#4299e1',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }}
+                              title="Move up"
+                            >
+                              Up
+                            </button>
+                            <button
+                              onClick={() => handleMoveBodyDown(body._id)}
+                              disabled={currentIndex === emailBodySequence.length - 1}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: currentIndex === emailBodySequence.length - 1 ? '#555' : '#4299e1',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: currentIndex === emailBodySequence.length - 1 ? 'not-allowed' : 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }}
+                              title="Move down"
+                            >
+                              Down
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -439,13 +566,13 @@ export default function Campaigns() {
           {/* Segments Selection */}
           <div className="campaign-form-section">
             <label className="campaign-form-label">
-              🎯 Select Target Segments ({selectedSegments.length} selected):
+              Target Segments ({selectedSegments.length} selected):
             </label>
             
             {segments.length === 0 ? (
               <div className="campaign-warning-box">
                 <p className="campaign-warning-text">
-                  ⚠️ No segments found. Please create segments first in the Contact Manager.
+                  No segments found. Please create segments first in the Contact Manager.
                 </p>
               </div>
             ) : (
@@ -461,7 +588,7 @@ export default function Campaigns() {
                   
                   {selectedSegments.length > 0 && (
                     <div className="campaign-recipients-count">
-                      📊 Total Recipients: {calculateTotalRecipients().length} (deduplicated)
+                      Total Recipients: {totalRecipients.length} (deduplicated)
                     </div>
                   )}
                 </div>
@@ -485,7 +612,7 @@ export default function Campaigns() {
                         <div className="campaign-segment-header-flex">
                           <div>
                             <div className="campaign-segment-name">
-                              🎯 {segment.name}
+                              {segment.name}
                             </div>
                             <div className="campaign-segment-description">
                               {segment.description || 'No description'}
@@ -507,8 +634,56 @@ export default function Campaigns() {
           {selectedEmailBodies.length > 0 && selectedSegments.length > 0 && (
             <div className="campaign-summary">
               <h4 className="campaign-summary-title">
-                🎯 Campaign Summary
+                Campaign Summary
               </h4>
+              
+              {/* Email Bodies Sequence Display */}
+              {emailBodySequence.length > 0 && (
+                <div style={{
+                  backgroundColor: '#1a2a2a',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  borderLeft: '4px solid #4299e1'
+                }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#b0b0b0', marginBottom: '12px', textTransform: 'uppercase' }}>
+                    Email Send Sequence
+                  </div>
+                  {emailBodySequence.map((bodyId, idx) => {
+                    const body = emailBodies.find(b => b._id === bodyId);
+                    return (
+                      <div key={bodyId} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '8px 0',
+                        borderBottom: idx < emailBodySequence.length - 1 ? '1px solid #333' : 'none'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '28px',
+                          height: '28px',
+                          backgroundColor: '#4299e1',
+                          color: 'white',
+                          borderRadius: '50%',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {idx + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ color: '#ffffff', fontSize: '14px', fontWeight: '600' }}>
+                            {body?.name || 'Untitled'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
               <div className="campaign-summary-grid">
                 <div className="campaign-summary-item">
                   <div className="campaign-summary-label">EMAIL BODIES</div>
@@ -525,7 +700,7 @@ export default function Campaigns() {
                 <div className="campaign-summary-item">
                   <div className="campaign-summary-label">TOTAL RECIPIENTS</div>
                   <div className="campaign-summary-value">
-                    {calculateTotalRecipients().length}
+                    {totalRecipients.length}
                   </div>
                 </div>
               </div>
@@ -536,10 +711,10 @@ export default function Campaigns() {
           <div className="campaign-action-buttons">
             <button
               onClick={handleSubmitCampaign}
-              disabled={!campaignName.trim() || selectedEmailBodies.length === 0 || selectedSegments.length === 0}
+              disabled={!isFormValid.name || !isFormValid.bodies || !isFormValid.segments}
               className="campaign-btn-submit"
             >
-              🚀 Create Campaign ({calculateTotalRecipients().length} recipients)
+              Create Campaign ({totalRecipients.length} recipients)
             </button>
             <button
               onClick={handleCancelCreate}
@@ -556,7 +731,7 @@ export default function Campaigns() {
         <div>
           {campaigns.length === 0 ? (
             <div className="campaign-empty-state">
-              <div className="campaign-empty-icon">🚀</div>
+              <div className="campaign-empty-icon">Campaigns</div>
               <h3 className="campaign-empty-title">No campaigns yet</h3>
               <p className="campaign-empty-description">
                 Create your first email campaign to start reaching your audience segments
@@ -580,18 +755,18 @@ export default function Campaigns() {
                   <div className="campaign-card-header">
                     <div>
                       <h4 className="campaign-card-title">
-                        🚀 {campaign.name}
+                        {campaign.name}
                       </h4>
                       <p className="campaign-card-description">
                         {campaign.description}
                       </p>
                       <div className="campaign-card-meta">
-                        <span>📅 Created: {new Date(campaign.createdAt).toLocaleDateString()}</span>
-                        <span className={`campaign-card-status campaign-status-${campaign.status === 'Sent' ? 'sent' : campaign.status === 'Ready to Send' ? 'ready' : 'draft'}`}>
-                          📊 Status: {campaign.status}
+                        <span>Created: {new Date(campaign.createdAt).toLocaleDateString()}</span>
+                        <span className={`campaign-card-status campaign-status-${campaign.status === CAMPAIGN_STATUS.SENT ? 'sent' : campaign.status === CAMPAIGN_STATUS.READY ? 'ready' : 'draft'}`}>
+                          Status: {campaign.status}
                         </span>
-                        {campaign.sentCount > 0 && <span>📧 Sent to: {campaign.sentCount} recipients</span>}
-                        {campaign.sentAt && <span>⏰ Sent: {new Date(campaign.sentAt).toLocaleDateString()}</span>}
+                        {campaign.sentCount > 0 && <span>Sent to: {campaign.sentCount} recipients</span>}
+                        {campaign.sentAt && <span>Sent: {new Date(campaign.sentAt).toLocaleDateString()}</span>}
                       </div>
                     </div>
                     
@@ -604,25 +779,27 @@ export default function Campaigns() {
                       ) : (
                         <button
                           onClick={() => handleSendCampaign(campaign.id)}
-                          disabled={campaign.status === 'Sent' || !campaign.recipients || campaign.recipients.length === 0}
+                          disabled={campaign.status === CAMPAIGN_STATUS.SENT || !campaign.recipients || campaign.recipients.length === 0}
                           className="campaign-card-btn-send"
                         >
-                          {campaign.status === 'Sent' ? '✅ Sent' : `📤 Send Now (${campaign.recipients ? campaign.recipients.length : 0})`}
+                          {campaign.status === CAMPAIGN_STATUS.SENT ? 'Sent' : `Send Now (${campaign.recipients ? campaign.recipients.length : 0})`}
                         </button>
                       )}
                       
                       <button
                         onClick={() => handleDuplicateCampaign(campaign.id)}
                         className="campaign-card-btn-duplicate"
+                        title="Duplicate"
                       >
-                        📋
+                        Copy
                       </button>
                       
                       <button
                         onClick={() => handleDeleteCampaign(campaign.id)}
                         className="campaign-card-btn-delete"
+                        title="Delete"
                       >
-                        🗑️
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -632,19 +809,40 @@ export default function Campaigns() {
                     {/* Email Bodies */}
                     <div className="campaign-card-section">
                       <h5 className="campaign-card-section-title">
-                        📧 Email Bodies ({campaign.emailBodies ? campaign.emailBodies.length : 0}):
+                        Email Bodies ({campaign.emailBodies ? campaign.emailBodies.length : 0}):
                       </h5>
                       <div className="campaign-card-items-list">
-                        {campaign.emailBodies && campaign.emailBodies.map((body) => (
-                          <div key={body._id} className="campaign-card-item">
-                            <div className="campaign-card-item-name">
-                              {body.name || 'Untitled'}
+                        {campaign.emailBodies && campaign.emailBodies.map((body, idx) => (
+                          <div key={body._id} className="campaign-card-item" style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '24px',
+                              height: '24px',
+                              backgroundColor: '#4299e1',
+                              color: 'white',
+                              borderRadius: '50%',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              flexShrink: 0
+                            }}>
+                              {idx + 1}
                             </div>
-                            <div className="campaign-card-item-preview">
-                              {body.content ? 
-                                body.content.substring(0, 80) + '...' : 
-                                'No content'
-                              }
+                            <div style={{ flex: 1 }}>
+                              <div className="campaign-card-item-name">
+                                {body.name || 'Untitled'}
+                              </div>
+                              <div className="campaign-card-item-preview">
+                                {body.content ? 
+                                  body.content.substring(0, 80) + '...' : 
+                                  'No content'
+                                }
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -654,7 +852,7 @@ export default function Campaigns() {
                     {/* Target Segments */}
                     <div className="campaign-card-section">
                       <h5 className="campaign-card-section-title">
-                        🎯 Target Segments ({campaign.segments ? campaign.segments.length : 0}):
+                        Target Segments ({campaign.segments ? campaign.segments.length : 0}):
                       </h5>
                       <div className="campaign-card-items-list">
                         {campaign.segments && campaign.segments.map((segment) => (

@@ -1,9 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 // ============================================================================
-// CONSTANTS & STYLES
+// CONSTANTS & CONFIGURATION
 // ============================================================================
+
+const API_BASE_URL = 'http://localhost:3001';
+const ENDPOINTS = {
+  analytics: `${API_BASE_URL}/analytics`
+};
+
+const STORAGE_KEYS = {
+  emailCampaigns: 'emailCampaigns'
+};
 
 /**
  * Color Scheme for Dark Mode
@@ -22,10 +31,6 @@ const COLORS = {
   danger: '#f56565'        // Danger color (red)
 };
 
-/**
- * Reusable Style Objects
- * Centralized styles for consistent component appearance
- */
 const STYLE = {
   container: { 
     padding: '40px 50px', 
@@ -86,6 +91,80 @@ const STYLE = {
   }
 };
 
+// Component-specific styles
+const LOADING_STYLES = {
+  wrapper: { 
+    padding: '20px', 
+    textAlign: 'center', 
+    minHeight: '100vh', 
+    backgroundColor: COLORS.bg, 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  content: { textAlign: 'center' },
+  icon: { fontSize: '48px', marginBottom: '16px' },
+  title: { color: COLORS.text, margin: '0 0 8px 0' },
+  subtitle: { color: COLORS.textMuted }
+};
+
+const ERROR_STYLES = {
+  wrapper: {
+    padding: '40px 50px',
+    minHeight: '100vh',
+    backgroundColor: COLORS.bg,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  content: { textAlign: 'center' },
+  title: { color: COLORS.danger },
+  message: { color: COLORS.textMuted },
+  button: {
+    marginTop: '20px',
+    padding: '10px 20px',
+    backgroundColor: COLORS.accent,
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600'
+  }
+};
+
+const ACTIVITY_ITEM_STYLES = {
+  container: (isLast) => ({
+    padding: '16px',
+    borderBottom: !isLast ? `1px solid ${COLORS.border}` : 'none',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  }),
+  content: { flex: 1 },
+  description: { fontWeight: '600', color: COLORS.text },
+  timestamp: { fontSize: '12px', color: COLORS.textMuted },
+  badge: { ...STYLE.badge, backgroundColor: '#444', color: COLORS.text }
+};
+
+const CHART_BAR_STYLES = {
+  container: { textAlign: 'center', flex: 1 },
+  bar: (bgColor, height) => ({
+    backgroundColor: bgColor,
+    height: `${height}px`,
+    borderRadius: '4px 4px 0 0',
+    marginBottom: '8px',
+    display: 'flex',
+    alignItems: 'end',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    paddingBottom: '4px'
+  }),
+  label: { fontSize: '12px', color: COLORS.textMuted }
+};
+
 // ============================================================================
 // HELPER COMPONENTS
 // ============================================================================
@@ -93,15 +172,14 @@ const STYLE = {
 /**
  * LoadingState Component
  * Displays a loading indicator while fetching analytics data
- * Shows: Icon + Loading message + Instructions
  */
 function LoadingState() {
   return (
-    <div style={{ padding: '20px', textAlign: 'center', minHeight: '100vh', backgroundColor: COLORS.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-        <h2 style={{ color: COLORS.text, margin: '0 0 8px 0' }}>Loading Real Analytics...</h2>
-        <p style={{ color: COLORS.textMuted }}>Calculating data from your database</p>
+    <div style={LOADING_STYLES.wrapper}>
+      <div style={LOADING_STYLES.content}>
+        <div style={LOADING_STYLES.icon}>Loading</div>
+        <h2 style={LOADING_STYLES.title}>Loading Real Analytics...</h2>
+        <p style={LOADING_STYLES.subtitle}>Calculating data from your database</p>
       </div>
     </div>
   );
@@ -109,28 +187,19 @@ function LoadingState() {
 
 /**
  * StatCard Component
- * Displays a single statistic with icon, value, and subtitle
+ * Displays a single statistic with value and subtitle
  * Props:
  *  - label: Card title
  *  - value: Main number to display
  *  - subtitle: Additional info below value
- *  - icon: Emoji or icon to display
- *  - bgColor: Background color for icon section
  */
-function StatCard({ label, value, subtitle, icon, bgColor }) {
+function StatCard({ label, value, subtitle }) {
   return (
     <div style={STYLE.card}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Left side: Text content */}
-        <div>
-          <p style={STYLE.label}>{label}</p>
-          <p style={STYLE.largeText}>{typeof value === 'number' ? value.toLocaleString() : value}</p>
-          <p style={STYLE.smallText}>{subtitle}</p>
-        </div>
-        {/* Right side: Icon */}
-        <div style={{ backgroundColor: bgColor, borderRadius: '12px', padding: '12px', fontSize: '24px' }}>
-          {icon}
-        </div>
+      <div>
+        <p style={STYLE.label}>{label}</p>
+        <p style={STYLE.largeText}>{typeof value === 'number' ? value.toLocaleString() : value}</p>
+        <p style={STYLE.smallText}>{subtitle}</p>
       </div>
     </div>
   );
@@ -139,25 +208,18 @@ function StatCard({ label, value, subtitle, icon, bgColor }) {
 /**
  * ActivityItem Component
  * Displays a single activity entry in the activity feed
- * Shows: Icon + Description + Timestamp + Badge
  * Props:
- *  - activity: Object with icon, description, timestamp
+ *  - activity: Object with description, timestamp
  *  - isLast: Boolean to determine if border should be shown
  */
 function ActivityItem({ activity, isLast }) {
   return (
-    <div style={{ padding: '16px', borderBottom: !isLast ? `1px solid ${COLORS.border}` : 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
-      {/* Activity Icon */}
-      <div style={{ fontSize: '24px' }}>{activity.icon}</div>
-      
-      {/* Activity Content */}
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: '600', color: COLORS.text }}>{activity.description}</div>
-        <div style={{ fontSize: '12px', color: COLORS.textMuted }}>{new Date(activity.timestamp).toLocaleString()}</div>
+    <div style={ACTIVITY_ITEM_STYLES.container(isLast)}>
+      <div style={ACTIVITY_ITEM_STYLES.content}>
+        <div style={ACTIVITY_ITEM_STYLES.description}>{activity.description}</div>
+        <div style={ACTIVITY_ITEM_STYLES.timestamp}>{activity.timestamp}</div>
       </div>
-      
-      {/* Badge */}
-      <div style={{ ...STYLE.badge, backgroundColor: '#444', color: COLORS.text }}>REAL DATA</div>
+      <div style={ACTIVITY_ITEM_STYLES.badge}>REAL DATA</div>
     </div>
   );
 }
@@ -173,14 +235,14 @@ function ActivityItem({ activity, isLast }) {
  */
 function ChartBar({ data, maxCount, month }) {
   const height = maxCount > 0 ? (data / maxCount) * 160 : 20;
+  const barColor = data > 0 ? COLORS.accent : COLORS.border;
+  
   return (
-    <div style={{ textAlign: 'center', flex: 1 }}>
-      {/* Bar */}
-      <div style={{ backgroundColor: data > 0 ? COLORS.accent : COLORS.border, height: `${height}px`, borderRadius: '4px 4px 0 0', marginBottom: '8px', display: 'flex', alignItems: 'end', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: 'bold', paddingBottom: '4px' }}>
+    <div style={CHART_BAR_STYLES.container}>
+      <div style={CHART_BAR_STYLES.bar(barColor, height)}>
         {data > 0 ? data : '0'}
       </div>
-      {/* Label */}
-      <div style={{ fontSize: '12px', color: COLORS.textMuted }}>{month}</div>
+      <div style={CHART_BAR_STYLES.label}>{month}</div>
     </div>
   );
 }
@@ -197,9 +259,9 @@ export default function Dashboard() {
     totalCampaigns: 0,
     emailsSent: 0,
     contactGrowth: [],
-    segmentDistribution: [],
     recentActivity: [],
-    loading: true
+    loading: true,
+    error: null
   });
 
   // ========== EFFECTS ==========
@@ -207,104 +269,144 @@ export default function Dashboard() {
     fetchRealAnalytics();
   }, []);
 
-  // ========== FUNCTIONS ==========
+  // ========== API FUNCTIONS ==========
   /**
    * Fetches analytics data from backend API
    * Combines API data with campaign data from localStorage
    * Updates state with fetched data or handles errors gracefully
    */
-  const fetchRealAnalytics = async () => {
+  const fetchRealAnalytics = useCallback(async () => {
     try {
-      setAnalytics(prev => ({ ...prev, loading: true }));
-      const response = await axios.get('http://localhost:3001/analytics');
-      const campaigns = JSON.parse(localStorage.getItem('emailCampaigns') || '[]');
+      setAnalytics(prev => ({ ...prev, loading: true, error: null }));
+      
+      // Fetch analytics from server
+      const response = await axios.get(ENDPOINTS.analytics);
+      
+      // Get campaign data from localStorage
+      const campaigns = JSON.parse(localStorage.getItem(STORAGE_KEYS.emailCampaigns) || '[]');
       const emailsSent = campaigns.reduce((total, campaign) => total + (campaign.sentCount || 0), 0);
       
-      setAnalytics({ ...response.data.data, totalCampaigns: campaigns.length, emailsSent, loading: false });
+      // Update state with combined data
+      setAnalytics({
+        ...response.data.data,
+        totalCampaigns: campaigns.length,
+        emailsSent,
+        loading: false,
+        error: null
+      });
     } catch (error) {
       console.error('Error fetching analytics:', error);
-      setAnalytics(prev => ({ ...prev, loading: false }));
+      setAnalytics(prev => ({ ...prev, loading: false, error: 'Failed to load analytics' }));
     }
-  };
+  }, []);
+
+  // ========== MEMOIZED CALCULATIONS ==========
+  const maxContactGrowth = useMemo(
+    () => analytics.contactGrowth.length > 0 
+      ? Math.max(...analytics.contactGrowth.map(d => d.count))
+      : 0,
+    [analytics.contactGrowth]
+  );
+
+  const statsData = useMemo(() => [
+    { 
+      label: 'Database Contacts', 
+      value: analytics.totalContacts, 
+      subtitle: 'Live from MongoDB' 
+    },
+    { 
+      label: 'Active Segments', 
+      value: analytics.totalSegments, 
+      subtitle: 'Real segments created' 
+    },
+    { 
+      label: 'Campaigns Created', 
+      value: analytics.totalCampaigns, 
+      subtitle: 'User-created campaigns' 
+    },
+    { 
+      label: 'Emails Delivered', 
+      value: analytics.emailsSent, 
+      subtitle: 'Via Brevo API' 
+    }
+  ], [analytics.totalContacts, analytics.totalSegments, analytics.totalCampaigns, analytics.emailsSent]);
+
+  const lastUpdated = useMemo(() => new Date().toLocaleString(), []);
 
   // ========== RENDER ==========
   if (analytics.loading) return <LoadingState />;
 
-  const maxContactGrowth = analytics.contactGrowth.length > 0 ? Math.max(...analytics.contactGrowth.map(d => d.count)) : 0;
+  if (analytics.error) {
+    return (
+      <div style={ERROR_STYLES.wrapper}>
+        <div style={ERROR_STYLES.content}>
+          <h2 style={ERROR_STYLES.title}>Error Loading Analytics</h2>
+          <p style={ERROR_STYLES.message}>{analytics.error}</p>
+          <button onClick={fetchRealAnalytics} style={ERROR_STYLES.button}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={STYLE.container}>
-      
       {/* ===== HEADER SECTION ===== */}
       <div style={{ marginBottom: '30px' }}>
-        <h1 style={STYLE.heading1}>📊 Real-Time Analytics Dashboard</h1>
+        <h1 style={STYLE.heading1}>Real-Time Analytics Dashboard</h1>
         <p style={{ color: COLORS.textMuted, fontSize: '16px' }}>
-          Live data from your email marketing platform • Updated: {new Date().toLocaleString()}
+          Live data from your email marketing platform • Updated: {lastUpdated}
         </p>
       </div>
 
       {/* ===== STATS GRID SECTION ===== */}
-      {/* Displays 4 key metrics: Contacts, Segments, Campaigns, Emails */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '40px' }}>
-        <StatCard 
-          label="Database Contacts" 
-          value={analytics.totalContacts} 
-          subtitle="✅ Live from MongoDB" 
-          icon="👥" 
-          bgColor="#333" 
-        />
-        <StatCard 
-          label="Active Segments" 
-          value={analytics.totalSegments} 
-          subtitle="✅ Real segments created" 
-          icon="🎯" 
-          bgColor="#333" 
-        />
-        <StatCard 
-          label="Campaigns Created" 
-          value={analytics.totalCampaigns} 
-          subtitle="✅ User-created campaigns" 
-          icon="🚀" 
-          bgColor="#333" 
-        />
-        <StatCard 
-          label="Emails Delivered" 
-          value={analytics.emailsSent} 
-          subtitle="✅ Via Brevo API" 
-          icon="📧" 
-          bgColor="#333" 
-        />
+        {statsData.map((stat, idx) => (
+          <StatCard 
+            key={idx}
+            label={stat.label} 
+            value={stat.value} 
+            subtitle={stat.subtitle} 
+          />
+        ))}
       </div>
 
       {/* ===== CONTACT GROWTH CHART SECTION ===== */}
-      {/* Bar chart showing contact growth over time */}
       <div style={{ ...STYLE.card, marginBottom: '30px' }}>
-        <h3 style={STYLE.heading3}>📈 Real Contact Growth (From Your Database)</h3>
+        <h3 style={STYLE.heading3}>Real Contact Growth (From Your Database)</h3>
         <div style={{ display: 'flex', alignItems: 'end', gap: '12px', height: '220px' }}>
-          {analytics.contactGrowth.map((data, idx) => (
-            <ChartBar key={idx} data={data.count} maxCount={maxContactGrowth} month={data.month} />
-          ))}
+          {analytics.contactGrowth.length > 0 ? (
+            analytics.contactGrowth.map((data, idx) => (
+              <ChartBar key={idx} data={data.count} maxCount={maxContactGrowth} month={data.month} />
+            ))
+          ) : (
+            <div style={{ width: '100%', textAlign: 'center', color: COLORS.textMuted, padding: '20px' }}>
+              No data available
+            </div>
+          )}
         </div>
         <p style={{ fontSize: '12px', color: COLORS.textMuted, marginTop: '10px', textAlign: 'center' }}>
-          📊 Based on actual contact creation dates in your database
+          Based on actual contact creation dates in your database
         </p>
       </div>
 
       {/* ===== RECENT ACTIVITY SECTION ===== */}
-      {/* Shows recent system activities or empty state */}
       <div style={STYLE.card}>
-        <h3 style={STYLE.heading2}>🕒 Live Activity Feed</h3>
+        <h3 style={STYLE.heading2}>Live Activity Feed</h3>
         {analytics.recentActivity.length === 0 ? (
-          // Empty state when no activities
           <div style={{ textAlign: 'center', padding: '40px', color: COLORS.textMuted }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>No Activity</div>
             <p>No recent activity - start by adding contacts or creating segments!</p>
           </div>
         ) : (
-          // Activity list
           <div>
             {analytics.recentActivity.map((activity, idx) => (
-              <ActivityItem key={idx} activity={activity} isLast={idx === analytics.recentActivity.length - 1} />
+              <ActivityItem 
+                key={idx} 
+                activity={activity} 
+                isLast={idx === analytics.recentActivity.length - 1} 
+              />
             ))}
           </div>
         )}
