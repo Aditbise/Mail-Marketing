@@ -99,6 +99,17 @@ export default function EmailBodyEditor() {
       return;
     }
 
+    console.log('📝 Creating template with data:', {
+      name: newTemplate.name,
+      subject: newTemplate.subject,
+      fromName: newTemplate.fromName,
+      fromEmail: newTemplate.fromEmail,
+      contentLength: newTemplate.content?.length || 0,
+      contentPreview: newTemplate.content?.substring(0, 100) || 'NO CONTENT',
+      hasContent: !!newTemplate.content,
+      fullData: newTemplate
+    });
+
     try {
       const response = await axios.post('http://localhost:3001/email-templates', {
         ...newTemplate,
@@ -112,6 +123,7 @@ export default function EmailBodyEditor() {
         isDefault: false
       });
       
+      console.log('✅ Template created successfully:', response.data.template);
       setTemplates([...templates, response.data.template]);
       setShowCreateModal(false);
     } catch (error) {

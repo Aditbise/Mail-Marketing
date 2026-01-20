@@ -29,9 +29,9 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const DashboardLayout = ({ children }) => (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="flex flex-col md:flex-row min-h-screen">
       <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
-      <main style={{ flexGrow: 1, padding: '20px' }}>
+      <main className="flex-grow p-2 sm:p-3 md:p-5 w-full overflow-auto">
         {children}
       </main>
     </div>

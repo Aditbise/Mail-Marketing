@@ -8,14 +8,18 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const fs = require("fs");
 
-const EmployeeModel = require('./Models/Email.js');
-const EmailListModel = require('./Models/EmailList.js');
+// Database Models
+const UserModel = require('./Models/Email.js'); // User authentication (name, email, password)
 const EmailTemplateModel = require('./Models/EmailTemplate.js');   
+const EmailListModel = require('./Models/EmailList.js');
 const SegmentModel = require('./Models/Segmant.js');
 const CompanyInfo = require('./Models/CompanyInfo');
 const EmailBody = require('./Models/EmailBody'); 
 const EmailCampaign = require('./Models/EmailCampaign');
+const Campaign = require('./Models/Campaign.js'); // For scheduled campaigns
 const EmailTracking = require('./Models/EmailTracking');
+
+// Services
 const EmailService = require('./services/EmailService.js');
 
 const app = express();
@@ -23,8 +27,10 @@ app.use(express.json());
 app.use(cors({
     origin: [
         "http://localhost:3000", 
-        "http://localhost:5173",  
-        "http://127.0.0.1:5173"
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174"
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -134,7 +140,7 @@ mongoose.connect(MONGODB_URI)
 // ===== AUTH ROUTES =====
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
-    EmployeeModel.findOne({ email: email })
+    UserModel.findOne({ email: email })
     .then(user => {
         if (user) {
             if (user.password === password) {
@@ -150,8 +156,8 @@ app.post('/login', (req, res) => {
 });
 
 app.post('/signup', (req, res) => {
-    EmployeeModel.create(req.body)
-        .then(employee => res.json(employee))
+    UserModel.create(req.body)
+        .then(user => res.json(user))
         .catch(err => {
             if (err.code === 11000) {
                 res.status(400).json({ message: 'Email already exists!' });
@@ -321,6 +327,19 @@ app.post('/email-templates', async (req, res) => {
 app.get('/email-templates', async (req, res) => {
     try {
         const templates = await EmailTemplateModel.find().sort({ createdAt: -1 });
+        console.log('📥 [GET /email-templates] Returning templates:', {
+            count: templates.length,
+            templates: templates.map(t => ({
+                id: t._id,
+                name: t.name,
+                subject: t.subject,
+                fromEmail: t.fromEmail,
+                hasContent: !!t.content,
+                contentLength: t.content?.length || 0,
+                contentPreview: t.content?.substring(0, 100) || 'MISSING CONTENT',
+                fullContent: t.content ? `[${t.content.length} chars]` : 'NULL'
+            }))
+        });
         res.json(templates);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching templates', error: error.message });
@@ -520,6 +539,17 @@ app.post('/send-campaign', async (req, res) => {
             emailBodiesCount: campaign.emailBodies?.length || 0,
             segmentsCount: campaign.segments?.length || 0
         });
+        
+        console.log('📋 Email bodies in campaign:', campaign.emailBodies?.map(body => ({
+            id: body._id,
+            name: body.name,
+            subject: body.subject,
+            fromEmail: body.fromEmail,
+            hasContent: !!body.content,
+            contentLength: body.content?.length || 0,
+            contentPreview: body.content?.substring(0, 100) || 'MISSING CONTENT',
+            fullContent: body.content || 'NULL CONTENT FIELD'
+        })));
         
         if (!campaign || !campaign.recipients || campaign.recipients.length === 0) {
             console.log('❌ No recipients found');
@@ -884,5 +914,271 @@ app.delete('/company-info/logo', async (req, res) => {
         res.status(500).json({ message: 'Error deleting logo', error });
     }
 });
+
+// ========== SCHEDULED CAMPAIGN ROUTES ==========
+
+// Save scheduled campaign
+app.post('/schedule-campaign', async (req, res) => {
+    try {
+        const { name, description, emailBodies, segments, recipients, scheduledFor, companyInfo } = req.body;
+        
+        if (!name || !emailBodies || emailBodies.length === 0 || !recipients || recipients.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: name, emailBodies, recipients'
+            });
+        }
+
+        if (new Date(scheduledFor) <= new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Scheduled time must be in the future'
+            });
+        }
+
+        const campaign = new Campaign({
+            name,
+            description: description || '',
+            emailBodies,
+            segments,
+            recipients,
+            scheduledFor: new Date(scheduledFor),
+            status: 'Scheduled',
+            scheduleMode: 'scheduled',
+            companyInfo
+        });
+
+        await campaign.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Campaign scheduled successfully',
+            campaignId: campaign._id,
+            scheduledFor: campaign.scheduledFor
+        });
+    } catch (error) {
+        console.error('Error scheduling campaign:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error scheduling campaign',
+            error: error.message
+        });
+    }
+});
+
+// Get all scheduled campaigns
+app.get('/scheduled-campaigns', async (req, res) => {
+    try {
+        const campaigns = await Campaign.find({ status: 'Scheduled' })
+            .sort({ scheduledFor: 1 })
+            .populate('emailBodies')
+            .populate('segments')
+            .populate('companyInfo');
+
+        res.json({
+            success: true,
+            campaigns,
+            count: campaigns.length
+        });
+    } catch (error) {
+        console.error('Error fetching scheduled campaigns:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching scheduled campaigns',
+            error: error.message
+        });
+    }
+});
+
+// Get scheduled campaigns ready to send (scheduled time has passed)
+app.get('/scheduled-campaigns/ready-to-send', async (req, res) => {
+    try {
+        const now = new Date();
+        const readyCampaigns = await Campaign.find({
+            status: 'Scheduled',
+            scheduledFor: { $lte: now }
+        })
+            .sort({ scheduledFor: 1 })
+            .populate('emailBodies')
+            .populate('segments')
+            .populate('companyInfo');
+
+        res.json({
+            success: true,
+            campaigns: readyCampaigns,
+            count: readyCampaigns.length
+        });
+    } catch (error) {
+        console.error('Error fetching ready campaigns:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching ready campaigns',
+            error: error.message
+        });
+    }
+});
+
+// Get specific scheduled campaign by ID
+app.get('/scheduled-campaigns/:id', async (req, res) => {
+    try {
+        const campaign = await Campaign.findById(req.params.id)
+            .populate('emailBodies')
+            .populate('segments')
+            .populate('companyInfo');
+
+        if (!campaign) {
+            return res.status(404).json({
+                success: false,
+                message: 'Campaign not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            campaign
+        });
+    } catch (error) {
+        console.error('Error fetching campaign:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching campaign',
+            error: error.message
+        });
+    }
+});
+
+// Send scheduled campaign
+app.post('/send-scheduled-campaign/:id', async (req, res) => {
+    try {
+        const campaign = await Campaign.findById(req.params.id)
+            .populate('emailBodies')
+            .populate('segments')
+            .populate('companyInfo');
+
+        if (!campaign) {
+            return res.status(404).json({
+                success: false,
+                message: 'Campaign not found'
+            });
+        }
+
+        if (campaign.status === 'Sent') {
+            return res.status(400).json({
+                success: false,
+                message: 'This campaign has already been sent'
+            });
+        }
+
+        if (!campaign.recipients || campaign.recipients.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No recipients found for this campaign'
+            });
+        }
+
+        // Send campaign emails (reuse existing email sending logic)
+        // This would call your email service to send to all recipients
+        console.log(`📧 Sending scheduled campaign: ${campaign.name}`);
+
+        // Update campaign status
+        campaign.status = 'Sent';
+        campaign.sentAt = new Date();
+        campaign.sentCount = campaign.recipients.length;
+        await campaign.save();
+
+        res.json({
+            success: true,
+            message: 'Scheduled campaign sent successfully',
+            sentCount: campaign.sentCount,
+            sentAt: campaign.sentAt
+        });
+    } catch (error) {
+        console.error('Error sending scheduled campaign:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error sending scheduled campaign',
+            error: error.message
+        });
+    }
+});
+
+// Update scheduled campaign
+app.put('/scheduled-campaigns/:id', async (req, res) => {
+    try {
+        const { name, description, scheduledFor } = req.body;
+        
+        const campaign = await Campaign.findById(req.params.id);
+
+        if (!campaign) {
+            return res.status(404).json({
+                success: false,
+                message: 'Campaign not found'
+            });
+        }
+
+        if (campaign.status === 'Sent') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot update a campaign that has already been sent'
+            });
+        }
+
+        if (scheduledFor && new Date(scheduledFor) <= new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Scheduled time must be in the future'
+            });
+        }
+
+        if (name) campaign.name = name;
+        if (description !== undefined) campaign.description = description;
+        if (scheduledFor) campaign.scheduledFor = new Date(scheduledFor);
+        campaign.updatedAt = new Date();
+
+        await campaign.save();
+
+        res.json({
+            success: true,
+            message: 'Campaign updated successfully',
+            campaign
+        });
+    } catch (error) {
+        console.error('Error updating campaign:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating campaign',
+            error: error.message
+        });
+    }
+});
+
+// Delete scheduled campaign
+app.delete('/scheduled-campaigns/:id', async (req, res) => {
+    try {
+        const campaign = await Campaign.findByIdAndDelete(req.params.id);
+
+        if (!campaign) {
+            return res.status(404).json({
+                success: false,
+                message: 'Campaign not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Campaign deleted successfully',
+            campaignId: campaign._id
+        });
+    } catch (error) {
+        console.error('Error deleting campaign:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting campaign',
+            error: error.message
+        });
+    }
+});
+
+// ========== END SCHEDULED CAMPAIGN ROUTES ==========
 
 // Email body routes

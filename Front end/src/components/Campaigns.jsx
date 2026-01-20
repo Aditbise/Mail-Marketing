@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
-// ============================================================================
-// CONSTANTS & STYLES
-// ============================================================================
-
 const API_BASE_URL = 'http://localhost:3001';
 const ENDPOINTS = {
   emailTemplates: `${API_BASE_URL}/email-templates`,
@@ -17,6 +13,7 @@ const ENDPOINTS = {
 const CAMPAIGN_STATUS = {
   DRAFT: 'Draft',
   READY: 'Ready to Send',
+  SCHEDULED: 'Scheduled',
   SENT: 'Sent'
 };
 
@@ -26,99 +23,8 @@ const VALIDATION_MESSAGES = {
   segments: 'Please select at least one segment for the campaign',
   recipients: 'No recipients found in the selected segments',
   companyInfo: 'Company information is required to send campaigns. Please update your company info.',
-  testEmail: 'Please enter a valid email address'
-};
-
-const COLORS = {
-  dark_bg: '#1a1a1a',
-  dark_panel: '#2a3f3f',
-  dark_light: '#1a2a2a',
-  accent_blue: '#4299e1',
-  danger_red: '#f56565',
-  text_primary: '#ffffff',
-  text_secondary: '#b0b0b0',
-  text_tertiary: '#808080',
-  text_disabled: '#444',
-  border_color: '#333',
-  border_light: '#444'
-};
-
-const SECTION_HEADER_STYLE = {
-  color: COLORS.text_secondary,
-  fontSize: '12px',
-  textTransform: 'uppercase',
-  fontWeight: '600',
-  marginBottom: '12px'
-};
-
-const SEQUENCE_NUMBER_STYLE = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minWidth: '36px',
-  height: '36px',
-  backgroundColor: COLORS.accent_blue,
-  color: COLORS.text_primary,
-  borderRadius: '50%',
-  fontSize: '14px',
-  fontWeight: 'bold',
-  flexShrink: 0
-};
-
-const SMALL_SEQUENCE_NUMBER_STYLE = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minWidth: '24px',
-  height: '24px',
-  backgroundColor: COLORS.accent_blue,
-  color: COLORS.text_primary,
-  borderRadius: '50%',
-  fontSize: '11px',
-  fontWeight: 'bold',
-  flexShrink: 0
-};
-
-const EMPTY_STATE_STYLE = {
-  backgroundColor: COLORS.dark_light,
-  borderRadius: '8px',
-  padding: '20px',
-  textAlign: 'center',
-  color: COLORS.text_tertiary,
-  border: `1px dashed ${COLORS.border_light}`
-};
-
-const BUTTON_STYLE = {
-  base: {
-    padding: '6px 10px',
-    color: COLORS.text_primary,
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '11px',
-    fontWeight: '600'
-  },
-  primary: {
-    backgroundColor: COLORS.accent_blue
-  },
-  danger: {
-    backgroundColor: COLORS.danger_red
-  },
-  disabled: {
-    backgroundColor: COLORS.text_disabled,
-    cursor: 'not-allowed',
-    opacity: 0.5
-  }
-};
-
-const SEQUENCE_ITEM_STYLE = {
-  backgroundColor: COLORS.dark_panel,
-  border: `1px solid ${COLORS.accent_blue}`,
-  borderRadius: '8px',
-  padding: '16px',
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: '12px'
+  testEmail: 'Please enter a valid email address',
+  scheduledTime: 'Please select a valid date and time for scheduling'
 };
 
 export default function Campaigns() {
@@ -136,6 +42,12 @@ export default function Campaigns() {
   const [loading, setLoading] = useState(false);
   const [sendingCampaign, setSendingCampaign] = useState(null);
   const [error, setError] = useState(null);
+  
+  // ========== SCHEDULING STATE ==========
+  const [scheduleMode, setScheduleMode] = useState('immediate'); // 'immediate' or 'scheduled'
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [scheduledCampaigns, setScheduledCampaigns] = useState([]);
 
   // ========== EFFECTS ==========
   useEffect(() => {
@@ -143,7 +55,11 @@ export default function Campaigns() {
   }, []);
 
   useEffect(() => {
-    persistCampaigns();
+    try {
+      localStorage.setItem('emailCampaigns', JSON.stringify(campaigns));
+    } catch (error) {
+      console.error('Error saving campaigns:', error);
+    }
   }, [campaigns]);
 
   // Clean up sequence duplicates if they exist
@@ -194,6 +110,20 @@ export default function Campaigns() {
   const fetchEmailBodies = useCallback(async () => {
     try {
       const response = await axios.get(ENDPOINTS.emailTemplates);
+      console.log('📥 Fetched email templates from server:', {
+        count: response.data?.length || 0,
+        templates: response.data?.map(t => ({
+          id: t._id,
+          name: t.name,
+          subject: t.subject,
+          fromName: t.fromName,
+          fromEmail: t.fromEmail,
+          hasContent: !!t.content,
+          contentLength: t.content?.length || 0,
+          contentPreview: t.content?.substring(0, 100) || 'NO CONTENT',
+          fullData: t
+        })) || []
+      });
       setEmailBodies(response.data || []);
     } catch (error) {
       console.error('Error fetching email templates:', error);
@@ -220,13 +150,60 @@ export default function Campaigns() {
     }
   }, []);
 
-  const persistCampaigns = useCallback(() => {
-    if (campaigns.length > 0) {
-      localStorage.setItem('emailCampaigns', JSON.stringify(campaigns));
-    } else {
-      localStorage.removeItem('emailCampaigns');
-    }
-  }, [campaigns]);
+  // ========== TEMPLATE VARIABLE REPLACEMENT ==========
+  const replaceTemplateVariables = useCallback((template, data) => {
+    if (!template) return '';
+    
+    let content = template;
+    const variables = {
+      '{{companyName}}': data?.companyName || 'Company',
+      '{{companyEmail}}': data?.companyEmail || 'contact@company.com',
+      '{{companyPhone}}': data?.companyPhone || '+1-800-0000',
+      '{{companyWebsite}}': data?.companyWebsite || 'www.company.com',
+      '{{companyAddress}}': data?.companyAddress || 'Company Address',
+      '{{logo}}': data?.logo || '[Company Logo]',
+      '{{socialLinks}}': data?.socialLinks || '',
+      '{{footerText}}': data?.footerText || 'Best regards, ' + (data?.companyName || 'Company'),
+      '{{currentYear}}': new Date().getFullYear().toString(),
+      '{{currentDate}}': new Date().toLocaleDateString(),
+      '{{recipientName}}': '[Recipient Name]'
+    };
+
+    Object.entries(variables).forEach(([placeholder, value]) => {
+      const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      content = content.replace(regex, value || '');
+    });
+
+    return content;
+  }, []);
+
+  // ========== SCHEDULING HELPER FUNCTIONS ==========
+  const getScheduledCountdown = useCallback((scheduledTime) => {
+    const now = new Date();
+    const scheduled = new Date(scheduledTime);
+    const diff = scheduled - now;
+    
+    if (diff < 0) return 'Ready to send';
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  }, []);
+
+  const getMinDateTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 5); // Minimum 5 minutes in future
+    return now.toISOString().slice(0, 16);
+  };
+
+  const formatScheduleDateTime = (dateString, timeString) => {
+    if (!dateString || !timeString) return null;
+    return new Date(`${dateString}T${timeString}`);
+  };
 
   // ========== MEMOIZED CALCULATIONS ==========
   const calculateTotalRecipients = useCallback((segmentIds = selectedSegments) => {
@@ -266,14 +243,20 @@ export default function Campaigns() {
     setCampaignName('');
     setCampaignDescription('');
     setError(null);
+    setScheduleMode('immediate');
+    setScheduledDate('');
+    setScheduledTime('');
   }, []);
 
   const validateCampaignForm = useCallback(() => {
     if (!campaignName.trim()) return VALIDATION_MESSAGES.campaignName;
     if (selectedEmailBodies.length === 0) return VALIDATION_MESSAGES.emailBodies;
     if (selectedSegments.length === 0) return VALIDATION_MESSAGES.segments;
+    if (scheduleMode === 'scheduled' && (!scheduledDate || !scheduledTime)) {
+      return VALIDATION_MESSAGES.scheduledTime;
+    }
     return null;
-  }, [campaignName, selectedEmailBodies, selectedSegments]);
+  }, [campaignName, selectedEmailBodies, selectedSegments, scheduleMode, scheduledDate, scheduledTime]);
 
   const handleCreateCampaign = useCallback(() => {
     setShowCreateForm(true);
@@ -411,17 +394,21 @@ export default function Campaigns() {
       segments: selectedSegmentObjects,
       recipients: totalRecipients,
       createdAt: new Date(),
-      status: CAMPAIGN_STATUS.READY,
+      status: scheduleMode === 'scheduled' ? CAMPAIGN_STATUS.SCHEDULED : CAMPAIGN_STATUS.READY,
+      scheduledFor: scheduleMode === 'scheduled' ? formatScheduleDateTime(scheduledDate, scheduledTime) : null,
       sentCount: 0,
       companyInfo: companyInfo
     };
 
     setCampaigns(prev => [...prev, newCampaign]);
-    alert(`Campaign "${campaignName}" created successfully! Email bodies will be sent in sequence (${emailBodySequence.length} emails per recipient).`);
+    const scheduleMsg = scheduleMode === 'scheduled' 
+      ? ` Campaign scheduled for ${new Date(newCampaign.scheduledFor).toLocaleString()}`
+      : '';
+    alert(`Campaign "${campaignName}" created successfully!${scheduleMsg} Email bodies will be sent in sequence (${emailBodySequence.length} emails per recipient).`);
     setShowCreateForm(false);
     resetFormState();
     setEmailBodySequence([]);
-  }, [campaignName, campaignDescription, selectedEmailBodies, selectedSegments, emailBodies, emailBodySequence, segments, totalRecipients, companyInfo, validateCampaignForm, resetFormState]);
+  }, [campaignName, campaignDescription, selectedEmailBodies, selectedSegments, emailBodies, emailBodySequence, segments, totalRecipients, companyInfo, validateCampaignForm, resetFormState, scheduleMode, scheduledDate, scheduledTime]);
 
   // ========== CAMPAIGN SEND ==========
   const validateCampaignSend = useCallback((campaign) => {
@@ -432,10 +419,35 @@ export default function Campaigns() {
   }, []);
 
   const sendCampaignToServer = useCallback(async (campaign) => {
-    const response = await axios.post(ENDPOINTS.sendCampaign, { campaign });
+    console.log('🔍 DEBUG - Full Campaign Data:', campaign);
+    console.log('🔍 DEBUG - Company Info:', campaign.companyInfo);
+    console.log('🔍 DEBUG - Company Logo:', campaign.companyInfo?.logo);
+    console.log('🔍 DEBUG - Email Bodies:', campaign.emailBodies);
+    
+    const campaignWithReplacedContent = {
+      ...campaign,
+      emailBodies: campaign.emailBodies?.map(body => ({
+        ...body,
+        content: replaceTemplateVariables(body.content, campaign.companyInfo),
+        subject: replaceTemplateVariables(body.subject || '', campaign.companyInfo)
+      })) || []
+    };
+
+    console.log('Sending campaign to server:', {
+      name: campaignWithReplacedContent.name,
+      recipientsCount: campaignWithReplacedContent.recipients?.length || 0,
+      emailBodiesCount: campaignWithReplacedContent.emailBodies?.length || 0,
+      companyInfoInCampaign: campaignWithReplacedContent.companyInfo,
+      emailBodies: campaignWithReplacedContent.emailBodies
+    });
+
+    const response = await axios.post(ENDPOINTS.sendCampaign, { campaign: campaignWithReplacedContent });
+    
+    console.log('✅ Server response:', response.data);
+    
     if (!response.data.success) throw new Error(response.data.message || 'Campaign sending failed');
     return response.data.data;
-  }, []);
+  }, [replaceTemplateVariables]);
 
   const updateCampaignStatus = useCallback((campaignId, recipientCount) => {
     setCampaigns(prev => prev.map(c => 
@@ -530,18 +542,61 @@ export default function Campaigns() {
     alert(`Campaign duplicated as "${duplicatedCampaign.name}"`);
   }, [campaigns]);
 
+  // ========== SCHEDULED CAMPAIGNS CHECK ==========
+  useEffect(() => {
+    const checkScheduledCampaigns = async () => {
+      const now = new Date();
+      const campaignsToSend = campaigns.filter(campaign => 
+        campaign.status === CAMPAIGN_STATUS.SCHEDULED && 
+        campaign.scheduledFor &&
+        new Date(campaign.scheduledFor) <= now
+      );
+      
+      for (const campaign of campaignsToSend) {
+        try {
+          const campaignWithReplacedContent = {
+            ...campaign,
+            emailBodies: campaign.emailBodies?.map(body => ({
+              ...body,
+              content: replaceTemplateVariables(body.content, campaign.companyInfo),
+              subject: replaceTemplateVariables(body.subject || '', campaign.companyInfo)
+            })) || []
+          };
+          await axios.post(ENDPOINTS.sendCampaign, { campaign: campaignWithReplacedContent });
+          setCampaigns(prev => prev.map(c => 
+            c.id === campaign.id 
+              ? { 
+                  ...c, 
+                  status: CAMPAIGN_STATUS.SENT, 
+                  sentCount: campaign.recipients?.length || 0,
+                  sentAt: new Date(),
+                  deliveryStatus: 'Completed'
+                }
+              : c
+          ));
+        } catch (error) {
+          console.error('Error auto-sending scheduled campaign:', error);
+        }
+      }
+    };
+
+    const interval = setInterval(checkScheduledCampaigns, 60000);
+    checkScheduledCampaigns(); // Check immediately on mount
+    return () => clearInterval(interval);
+  }, [campaigns, replaceTemplateVariables]);
+
   return (
-    <div className="campaign-container">
-      <div className="campaign-header">
-        <h1>Email Campaigns</h1>
-        <div className="campaign-header-actions">
-          <div className="campaign-stats">
+    <div className="w-full bg-zinc-950 text-white p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <h1 className="text-4xl font-bold text-white">Email Campaigns</h1>
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="bg-zinc-800 px-4 py-2 rounded text-sm text-white font-medium">
             {emailBodies.length} Bodies | {segments.length} Segments
           </div>
           
           <button
             onClick={handleCreateCampaign}
-            className="campaign-btn campaign-btn-create"
+            className="bg-lime-500 hover:bg-lime-600 text-black px-4 py-2 rounded font-semibold flex items-center gap-2 justify-center cursor-pointer"
           >
             <span>+</span>
             Create Campaign
@@ -549,7 +604,7 @@ export default function Campaigns() {
 
           <button
             onClick={handleSendTestEmail}
-            className="campaign-btn campaign-btn-test"
+            className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded font-semibold"
           >
             Send Test Email
           </button>
@@ -558,13 +613,12 @@ export default function Campaigns() {
 
       {/* Create Campaign Form */}
       {showCreateForm && (
-        <div className="campaign-form">
-          <h3>Create New Campaign</h3>
+        <div className="bg-zinc-800 rounded-lg p-6 mb-6 border border-lime-500">
+          <h3 className="text-2xl font-bold mb-6 text-lime-400">Create New Campaign</h3>
 
-          {/* Campaign Name & Description */}
-          <div className="campaign-form-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="campaign-form-label">
+              <label className="block text-lime-300 text-sm font-semibold mb-2">
                 Campaign Name *:
               </label>
               <input
@@ -572,12 +626,12 @@ export default function Campaigns() {
                 value={campaignName}
                 onChange={(e) => setCampaignName(e.target.value)}
                 placeholder="Enter campaign name..."
-                className="campaign-form-input"
+                className="w-full bg-zinc-700 border border-lime-600 text-white px-3 py-2 rounded focus:outline-none focus:border-lime-400"
               />
             </div>
 
             <div>
-              <label className="campaign-form-label">
+              <label className="block text-lime-300 text-sm font-semibold mb-2">
                 Campaign Description:
               </label>
               <input
@@ -585,73 +639,71 @@ export default function Campaigns() {
                 value={campaignDescription}
                 onChange={(e) => setCampaignDescription(e.target.value)}
                 placeholder="Enter campaign description..."
-                className="campaign-form-input"
+                className="w-full bg-zinc-700 border border-lime-600 text-white px-3 py-2 rounded focus:outline-none focus:border-lime-400"
               />
             </div>
           </div>
           
           {/* Email Bodies Selection */}
-          <div className="campaign-form-section">
-            <label className="campaign-form-label">
+          <div className="mb-6">
+            <label className="block text-lime-300 text-sm font-semibold mb-3">
               Email Bodies ({selectedEmailBodies.length} selected):
             </label>
             
             {emailBodies.length === 0 ? (
-              <div className="campaign-warning-box">
-                <p className="campaign-warning-text">
+              <div className="bg-lime-900 border border-lime-700 rounded p-3 text-lime-200 text-sm">
+                <p className="m-0">
                   No email bodies found. Please create an email body first in the Email Body Editor.
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* ===== LEFT: AVAILABLE BODIES ===== */}
                 <div>
-                  <h5 style={SECTION_HEADER_STYLE}>
+                  <h5 className="text-lime-300 text-xs uppercase font-semibold mb-3">
                     Available Email Bodies
                   </h5>
-                  <div className="campaign-button-container">
+                  <div className="mb-3">
                     <button
                       type="button"
                       onClick={handleSelectAllBodies}
-                      className="campaign-selection-btn-all"
+                      className="w-full bg-lime-500 hover:bg-lime-600 text-black px-3 py-2 rounded text-sm font-semibold"
                     >
                       {selectedEmailBodies.length === emailBodies.length ? 'Deselect All' : 'Select All'}
                     </button>
                   </div>
 
-                  <div className="campaign-selection-list">
+                  <div className="space-y-2">
                     {emailBodies.map((body) => {
                       const isSelected = selectedEmailBodies.includes(body._id);
                       
                       return (
                         <div
                           key={body._id}
-                          className="campaign-selection-item"
+                          className={`p-3 rounded cursor-pointer transition ${
+                            isSelected 
+                              ? 'bg-lime-900 border-l-4 border-lime-400 text-white' 
+                              : 'bg-zinc-700 hover:bg-zinc-600 text-white'
+                          }`}
                           onClick={() => handleEmailBodyToggle(body._id)}
-                          style={{
-                            backgroundColor: isSelected ? COLORS.dark_panel : 'transparent',
-                            borderLeft: isSelected ? `4px solid ${COLORS.accent_blue}` : 'none',
-                            cursor: 'pointer',
-                            opacity: isSelected ? 0.7 : 1
-                          }}
                         >
-                          <div className="campaign-selection-checkbox">
+                          <div className="flex gap-3">
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleEmailBodyToggle(body._id)}
-                              className="campaign-checkbox"
+                              className="mt-1 cursor-pointer"
                             />
-                          </div>
-                          <div className="campaign-selection-content">
-                            <div className="campaign-selection-title">
-                              {body.name || 'Untitled'}
-                            </div>
-                            <div className="campaign-selection-preview">
-                              {body.content ? 
-                                body.content.substring(0, 80) + '...' : 
-                                'No content available'
-                              }
+                            <div className="flex-1">
+                              <div className="text-white font-semibold">
+                                {body.name || 'Untitled'}
+                              </div>
+                              <div className="text-zinc-300 text-sm mt-1">
+                                {body.content ? 
+                                  body.content.substring(0, 80) + '...' : 
+                                  'No content available'
+                                }
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -662,18 +714,18 @@ export default function Campaigns() {
 
                 {/* ===== RIGHT: SELECTED SEQUENCE ===== */}
                 <div>
-                  <h5 style={SECTION_HEADER_STYLE}>
+                  <h5 className="text-lime-300 text-xs uppercase font-semibold mb-3">
                     Email Send Sequence ({emailBodySequence.length})
                   </h5>
                   
                   {emailBodySequence.length === 0 ? (
-                    <div style={EMPTY_STATE_STYLE}>
-                      <p style={{ margin: '0', fontSize: '14px' }}>
+                    <div className="bg-zinc-700 border-2 border-dashed border-lime-500 rounded p-5 text-center text-zinc-300">
+                      <p className="m-0 text-sm">
                         Select email bodies from the left to add them to the sequence
                       </p>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="space-y-3">
                       {emailBodySequence.map((bodyId, idx) => {
                         const body = emailBodies.find(b => b._id === bodyId);
                         const isFirst = idx === 0;
@@ -682,17 +734,17 @@ export default function Campaigns() {
                         return (
                           <div
                             key={bodyId}
-                            style={SEQUENCE_ITEM_STYLE}
+                            className="bg-zinc-700 border-l-4 border-lime-500 rounded p-4 flex gap-3 items-start"
                           >
-                            <div style={SEQUENCE_NUMBER_STYLE}>
+                            <div className="flex items-center justify-center min-w-9 h-9 bg-lime-500 text-black rounded-full text-sm font-bold flex-shrink-0">
                               {idx + 1}
                             </div>
 
-                            <div style={{ flex: 1 }}>
-                              <div style={{ color: COLORS.text_primary, fontWeight: '600', marginBottom: '4px' }}>
+                            <div className="flex-1">
+                              <div className="text-white font-semibold mb-1">
                                 {body?.name || 'Untitled'}
                               </div>
-                              <div style={{ fontSize: '12px', color: COLORS.text_tertiary }}>
+                              <div className="text-zinc-300 text-xs">
                                 {body?.content ? 
                                   body.content.substring(0, 60) + '...' : 
                                   'No content'
@@ -700,14 +752,15 @@ export default function Campaigns() {
                               </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                            <div className="flex flex-col gap-2 flex-shrink-0">
                               <button
                                 onClick={() => handleMoveBodyUp(bodyId)}
                                 disabled={isFirst}
-                                style={{
-                                  ...BUTTON_STYLE.base,
-                                  ...(isFirst ? BUTTON_STYLE.disabled : BUTTON_STYLE.primary)
-                                }}
+                                className={`px-2 py-1 text-xs font-semibold rounded ${
+                                  isFirst 
+                                    ? 'bg-zinc-400 text-white cursor-not-allowed opacity-75' 
+                                    : 'bg-lime-500 hover:bg-lime-600 text-black'
+                                }`}
                                 title="Move up in sequence"
                               >
                                 Up
@@ -715,20 +768,18 @@ export default function Campaigns() {
                               <button
                                 onClick={() => handleMoveBodyDown(bodyId)}
                                 disabled={isLast}
-                                style={{
-                                  ...BUTTON_STYLE.base,
-                                  ...(isLast ? BUTTON_STYLE.disabled : BUTTON_STYLE.primary)
-                                }}
+                                className={`px-2 py-1 text-xs font-semibold rounded ${
+                                  isLast 
+                                    ? 'bg-zinc-400 text-white cursor-not-allowed opacity-75' 
+                                    : 'bg-lime-500 hover:bg-lime-600 text-black'
+                                }`}
                                 title="Move down in sequence"
                               >
                                 Down
                               </button>
                               <button
                                 onClick={() => handleEmailBodyToggle(bodyId)}
-                                style={{
-                                  ...BUTTON_STYLE.base,
-                                  ...BUTTON_STYLE.danger
-                                }}
+                                className="px-2 py-1 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded"
                                 title="Remove from sequence"
                               >
                                 Remove
@@ -745,63 +796,59 @@ export default function Campaigns() {
           </div>
 
           {/* Segments Selection */}
-          <div className="campaign-form-section">
-            <label className="campaign-form-label">
+          <div className="mb-6">
+            <label className="block text-lime-300 text-sm font-semibold mb-3">
               Target Segments ({selectedSegments.length} selected):
             </label>
             
             {segments.length === 0 ? (
-              <div className="campaign-warning-box">
-                <p className="campaign-warning-text">
+              <div className="bg-lime-900 border-2 border-lime-500 rounded p-3 text-lime-100 text-sm">
+                <p className="m-0">
                   No segments found. Please create segments first in the Contact Manager.
                 </p>
               </div>
             ) : (
               <div>
-                <div className="campaign-segments-header">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                   <button
                     type="button"
                     onClick={handleSelectAllSegments}
-                    className="campaign-selection-btn-segments"
+                    className="bg-lime-500 hover:bg-lime-600 text-black px-4 py-2 rounded font-semibold text-sm"
                   >
                     {selectedSegments.length === segments.length ? 'Deselect All' : 'Select All'} Segments
                   </button>
                   
                   {selectedSegments.length > 0 && (
-                    <div className="campaign-recipients-count">
+                    <div className="text-lime-300 text-sm font-semibold">
                       Total Recipients: {totalRecipients.length} (deduplicated)
                     </div>
                   )}
                 </div>
 
-                <div className="campaign-selection-list">
+                <div className="space-y-2">
                   {segments.map((segment) => (
                     <div
                       key={segment._id}
-                      className="campaign-selection-item"
+                      className="bg-zinc-700 p-3 rounded cursor-pointer hover:bg-zinc-600 transition"
                       onClick={() => handleSegmentToggle(segment._id)}
                     >
-                      <div className="campaign-selection-checkbox">
+                      <div className="flex gap-3 items-start">
                         <input
                           type="checkbox"
                           checked={selectedSegments.includes(segment._id)}
                           onChange={() => handleSegmentToggle(segment._id)}
-                          className="campaign-checkbox"
+                          className="mt-1 cursor-pointer"
                         />
-                      </div>
-                      <div className="campaign-selection-content">
-                        <div className="campaign-segment-header-flex">
-                          <div>
-                            <div className="campaign-segment-name">
-                              {segment.name}
-                            </div>
-                            <div className="campaign-segment-description">
-                              {segment.description || 'No description'}
-                            </div>
+                        <div className="flex-1">
+                          <div className="text-white font-semibold">
+                            {segment.name}
                           </div>
-                          <div className="campaign-contacts-badge">
-                            {getContactCount(segment)} contacts
+                          <div className="text-zinc-300 text-sm mt-1">
+                            {segment.description || 'No description'}
                           </div>
+                        </div>
+                        <div className="bg-lime-500 text-black text-xs px-2 py-1 rounded font-semibold flex-shrink-0">
+                          {getContactCount(segment)} contacts
                         </div>
                       </div>
                     </div>
@@ -811,40 +858,111 @@ export default function Campaigns() {
             )}
           </div>
 
+          {/* Scheduling Section */}
+          <div className="mb-6">
+            <label className="block text-lime-300 text-sm font-semibold mb-3">
+              Send Timing:
+            </label>
+            
+            <div className="flex flex-col sm:flex-row gap-5 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="scheduleMode"
+                  value="immediate"
+                  checked={scheduleMode === 'immediate'}
+                  onChange={(e) => setScheduleMode(e.target.value)}
+                  className="cursor-pointer"
+                />
+                <span className="text-white">Send Immediately</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="scheduleMode"
+                  value="scheduled"
+                  checked={scheduleMode === 'scheduled'}
+                  onChange={(e) => setScheduleMode(e.target.value)}
+                  className="cursor-pointer"
+                />
+                <span className="text-white">Schedule for Later</span>
+              </label>
+            </div>
+
+            {scheduleMode === 'scheduled' && (
+              <div className="bg-zinc-700 border-l-4 border-lime-500 rounded p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-lime-300 text-xs uppercase font-semibold mb-2">
+                    Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-zinc-700 border border-lime-600 text-white px-3 py-2 rounded font-inherit focus:outline-none focus:border-lime-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-lime-300 text-xs uppercase font-semibold mb-2">
+                    Time:
+                  </label>
+                  <input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    className="w-full bg-zinc-700 border border-lime-600 text-white px-3 py-2 rounded font-inherit focus:outline-none focus:border-lime-400"
+                  />
+                </div>
+
+                {scheduledDate && scheduledTime && (
+                  <div className="md:col-span-2 bg-zinc-700 border-l-4 border-lime-500 rounded p-3">
+                    <div className="text-lime-300 text-xs uppercase font-semibold mb-1">
+                      Scheduled Send Time:
+                    </div>
+                    <div className="text-white text-sm font-semibold">
+                      {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Campaign Summary */}
           {selectedEmailBodies.length > 0 && selectedSegments.length > 0 && (
-            <div className="campaign-summary">
-              <h4 className="campaign-summary-title">
+            <div className="bg-gray-800 rounded-lg p-6 mb-6 border border-lime-500">
+              <h4 className="text-xl font-bold mb-4 text-lime-400">
                 Campaign Summary
               </h4>
               
+              {/* Template Variables Info */}
+              <div className="bg-zinc-700 border-l-4 border-lime-500 rounded p-3 mb-4 text-xs text-lime-300 font-semibold">
+                <strong>Available Template Variables:</strong>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div>{"{"}companyName{"}, {"}companyEmail{"}, {"}companyPhone{"}"}</div>
+                  <div>{"{"}companyWebsite{"}, {"}companyAddress{"}, {"}logo{"}"}</div>
+                  <div>{"{"}socialLinks{"}, {"}footerText{"}, {"}currentYear{"}"}</div>
+                  <div>{"{"}currentDate{"}, {"}recipientName{"}"}</div>
+                </div>
+              </div>
+              
               {/* Email Bodies Sequence Display */}
               {emailBodySequence.length > 0 && (
-                <div style={{
-                  backgroundColor: COLORS.dark_light,
-                  padding: '16px',
-                  borderRadius: '8px',
-                  marginBottom: '16px',
-                  borderLeft: `4px solid ${COLORS.accent_blue}`
-                }}>
-                  <div style={SECTION_HEADER_STYLE}>
+                <div className="bg-zinc-700 border-l-4 border-lime-500 rounded p-4 mb-4">
+                  <div className="text-lime-300 text-xs uppercase font-semibold mb-3">
                     Email Send Sequence
                   </div>
                   {emailBodySequence.map((bodyId, idx) => {
                     const body = emailBodies.find(b => b._id === bodyId);
                     return (
-                      <div key={bodyId} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '8px 0',
-                        borderBottom: idx < emailBodySequence.length - 1 ? `1px solid ${COLORS.border_color}` : 'none'
-                      }}>
-                        <div style={SMALL_SEQUENCE_NUMBER_STYLE}>
+                      <div key={bodyId} className={`flex items-center gap-3 py-2 ${idx < emailBodySequence.length - 1 ? 'border-b border-gray-600' : ''}`}>
+                        <div className="flex items-center justify-center min-w-6 h-6 bg-lime-500 text-black rounded-full text-xs font-bold flex-shrink-0">
                           {idx + 1}
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ color: COLORS.text_primary, fontSize: '14px', fontWeight: '600' }}>
+                        <div className="flex-1">
+                          <div className="text-white text-sm font-semibold">
                             {body?.name || 'Untitled'}
                           </div>
                         </div>
@@ -854,22 +972,22 @@ export default function Campaigns() {
                 </div>
               )}
               
-              <div className="campaign-summary-grid">
-                <div className="campaign-summary-item">
-                  <div className="campaign-summary-label">EMAIL BODIES</div>
-                  <div className="campaign-summary-value">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-lime-500 rounded p-3 text-center">
+                  <div className="text-black text-xs uppercase font-semibold mb-2">EMAIL BODIES</div>
+                  <div className="text-black text-2xl font-bold">
                     {selectedEmailBodies.length}
                   </div>
                 </div>
-                <div className="campaign-summary-item">
-                  <div className="campaign-summary-label">TARGET SEGMENTS</div>
-                  <div className="campaign-summary-value">
+                <div className="bg-lime-500 rounded p-3 text-center">
+                  <div className="text-black text-xs uppercase font-semibold mb-2">TARGET SEGMENTS</div>
+                  <div className="text-black text-2xl font-bold">
                     {selectedSegments.length}
                   </div>
                 </div>
-                <div className="campaign-summary-item">
-                  <div className="campaign-summary-label">TOTAL RECIPIENTS</div>
-                  <div className="campaign-summary-value">
+                <div className="bg-lime-500 rounded p-3 text-center">
+                  <div className="text-black text-xs uppercase font-semibold mb-2">TOTAL RECIPIENTS</div>
+                  <div className="text-black text-2xl font-bold">
                     {totalRecipients.length}
                   </div>
                 </div>
@@ -878,17 +996,17 @@ export default function Campaigns() {
           )}
 
           {/* Action Buttons */}
-          <div className="campaign-action-buttons">
+          <div className="flex gap-3">
             <button
               onClick={handleSubmitCampaign}
               disabled={!isFormValid.name || !isFormValid.bodies || !isFormValid.segments}
-              className="campaign-btn-submit"
+              className="flex-1 px-4 py-3 rounded font-semibold text-black bg-lime-500 hover:bg-lime-600 disabled:text-white disabled:bg-zinc-400 disabled:cursor-not-allowed"
             >
               Create Campaign ({totalRecipients.length} recipients)
             </button>
             <button
               onClick={handleCancelCreate}
-              className="campaign-btn-cancel"
+              className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-3 rounded font-semibold"
             >
               Cancel
             </button>
@@ -900,65 +1018,90 @@ export default function Campaigns() {
       {!showCreateForm && (
         <div>
           {campaigns.length === 0 ? (
-            <div className="campaign-empty-state">
-              <div className="campaign-empty-icon">Campaigns</div>
-              <h3 className="campaign-empty-title">No campaigns yet</h3>
-              <p className="campaign-empty-description">
+          <div className="text-center py-12 bg-zinc-800 rounded-lg border border-lime-500">
+              <div className="text-6xl mb-4">✉️</div>
+              <h3 className="text-2xl font-bold text-white mb-2">No campaigns yet</h3>
+              <p className="text-zinc-300 mb-6">
                 Create your first email campaign to start reaching your audience segments
               </p>
               <button
                 onClick={handleCreateCampaign}
-                className="campaign-empty-btn"
+                className="bg-lime-500 hover:bg-lime-600 text-black px-6 py-3 rounded font-semibold cursor-pointer"
               >
                 Get Started
               </button>
             </div>
           ) : (
             <div>
-              <h3 className="campaign-list-title">
+              <h3 className="text-2xl font-bold mb-6">
                 Your Campaigns ({campaigns.length})
               </h3>
               
               {campaigns.map((campaign) => (
-                <div key={campaign.id} className={`campaign-card${campaign.status === 'Sent' ? ' campaign-card-sent' : ''}`}>
+                <div key={campaign.id} className={`bg-zinc-800 rounded-lg p-6 mb-6 border border-lime-500 ${campaign.status === 'Sent' ? 'opacity-75' : ''}`}>
                   {/* Campaign Header */}
-                  <div className="campaign-card-header">
-                    <div>
-                      <h4 className="campaign-card-title">
+                  <div className="flex flex-col lg:flex-row justify-between items-start gap-6 mb-6 pb-6 border-b border-lime-600">
+                    <div className="flex-1">
+                      <h4 className="text-2xl font-bold text-lime-400 mb-2">
                         {campaign.name}
                       </h4>
-                      <p className="campaign-card-description">
+                      <p className="text-zinc-300 mb-3">
                         {campaign.description}
                       </p>
-                      <div className="campaign-card-meta">
+                      <div className="flex flex-wrap gap-3 text-sm text-zinc-300">
                         <span>Created: {new Date(campaign.createdAt).toLocaleDateString()}</span>
-                        <span className={`campaign-card-status campaign-status-${campaign.status === CAMPAIGN_STATUS.SENT ? 'sent' : campaign.status === CAMPAIGN_STATUS.READY ? 'ready' : 'draft'}`}>
+                        <span className={`px-2 py-1 rounded font-semibold ${
+                          campaign.status === CAMPAIGN_STATUS.SENT 
+                            ? 'bg-green-900 text-green-200' 
+                            : campaign.status === CAMPAIGN_STATUS.READY 
+                            ? 'bg-lime-900 text-lime-200' 
+                            : campaign.status === CAMPAIGN_STATUS.SCHEDULED 
+                            ? 'bg-yellow-900 text-yellow-200' 
+                            : 'bg-zinc-700 text-zinc-300'
+                        }`}>
                           Status: {campaign.status}
                         </span>
+                        {campaign.status === CAMPAIGN_STATUS.SCHEDULED && campaign.scheduledFor && (
+                          <span title={new Date(campaign.scheduledFor).toLocaleString()}>
+                            📅 Scheduled for {new Date(campaign.scheduledFor).toLocaleDateString()} at {new Date(campaign.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
                         {campaign.sentCount > 0 && <span>Sent to: {campaign.sentCount} recipients</span>}
                         {campaign.sentAt && <span>Sent: {new Date(campaign.sentAt).toLocaleDateString()}</span>}
                       </div>
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="campaign-card-actions">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                       {sendingCampaign === campaign.id ? (
-                        <div className="campaign-card-sending">
-                          📤 Sending...
+                        <div className="bg-zinc-700 text-white px-4 py-2 rounded font-semibold text-center">
+                          Sending...
                         </div>
                       ) : (
-                        <button
-                          onClick={() => handleSendCampaign(campaign.id)}
-                          disabled={campaign.status === CAMPAIGN_STATUS.SENT || !campaign.recipients || campaign.recipients.length === 0}
-                          className="campaign-card-btn-send"
-                        >
-                          {campaign.status === CAMPAIGN_STATUS.SENT ? 'Sent' : `Send Now (${campaign.recipients ? campaign.recipients.length : 0})`}
-                        </button>
+                        <>
+                          {campaign.status === CAMPAIGN_STATUS.SCHEDULED ? (
+                            <button
+                              onClick={() => handleSendCampaign(campaign.id)}
+                              className="bg-lime-500 hover:bg-lime-600 text-black px-4 py-2 rounded font-semibold flex-1"
+                              title={`Send campaign now or wait until ${new Date(campaign.scheduledFor).toLocaleString()}`}
+                            >
+                              Send Now ({campaign.recipients ? campaign.recipients.length : 0})
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSendCampaign(campaign.id)}
+                              disabled={campaign.status === CAMPAIGN_STATUS.SENT || !campaign.recipients || campaign.recipients.length === 0}
+                              className="flex-1 px-4 py-2 rounded font-semibold text-black bg-lime-500 hover:bg-lime-600 disabled:text-white disabled:bg-zinc-400 disabled:cursor-not-allowed"
+                            >
+                              {campaign.status === CAMPAIGN_STATUS.SENT ? 'Sent' : `Send Now (${campaign.recipients ? campaign.recipients.length : 0})`}
+                            </button>
+                          )}
+                        </>
                       )}
                       
                       <button
                         onClick={() => handleDuplicateCampaign(campaign.id)}
-                        className="campaign-card-btn-duplicate"
+                        className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded font-semibold flex-1"
                         title="Duplicate"
                       >
                         Copy
@@ -966,7 +1109,7 @@ export default function Campaigns() {
                       
                       <button
                         onClick={() => handleDeleteCampaign(campaign.id)}
-                        className="campaign-card-btn-delete"
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold flex-1"
                         title="Delete"
                       >
                         Delete
@@ -975,31 +1118,29 @@ export default function Campaigns() {
                   </div>
 
                   {/* Campaign Content Grid */}
-                  <div className="campaign-card-content-grid">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     {/* Email Bodies */}
-                    <div className="campaign-card-section">
-                      <h5 className="campaign-card-section-title">
+                    <div>
+                      <h5 className="text-lime-300 text-xs uppercase font-semibold mb-3">
                         Email Bodies ({campaign.emailBodies ? campaign.emailBodies.length : 0}):
                       </h5>
-                      <div className="campaign-card-items-list">
+                      <div className="space-y-2">
                         {campaign.emailBodies && campaign.emailBodies.map((body, idx) => (
-                          <div key={body._id} className="campaign-card-item" style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '12px'
-                          }}>
-                            <div style={SMALL_SEQUENCE_NUMBER_STYLE}>
-                              {idx + 1}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div className="campaign-card-item-name">
-                                {body.name || 'Untitled'}
+                          <div key={body._id} className="bg-zinc-700 rounded p-3">
+                            <div className="flex items-start gap-3">
+                              <div className="flex items-center justify-center min-w-6 h-6 bg-lime-500 text-black rounded-full text-xs font-bold flex-shrink-0">
+                                {idx + 1}
                               </div>
-                              <div className="campaign-card-item-preview">
-                                {body.content ? 
-                                  body.content.substring(0, 80) + '...' : 
-                                  'No content'
-                                }
+                              <div className="flex-1">
+                                <div className="text-white font-semibold">
+                                  {body.name || 'Untitled'}
+                                </div>
+                                <div className="text-zinc-300 text-xs mt-1">
+                                  {body.content ? 
+                                    body.content.substring(0, 80) + '...' : 
+                                    'No content'
+                                  }
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1008,22 +1149,22 @@ export default function Campaigns() {
                     </div>
 
                     {/* Target Segments */}
-                    <div className="campaign-card-section">
-                      <h5 className="campaign-card-section-title">
+                    <div>
+                      <h5 className="text-lime-300 text-xs uppercase font-semibold mb-3">
                         Target Segments ({campaign.segments ? campaign.segments.length : 0}):
                       </h5>
-                      <div className="campaign-card-items-list">
+                      <div className="space-y-2">
                         {campaign.segments && campaign.segments.map((segment) => (
-                          <div key={segment._id} className="campaign-segment-item">
+                          <div key={segment._id} className="bg-zinc-700 rounded p-3 flex justify-between items-start gap-3">
                             <div>
-                              <div className="campaign-segment-item-name">
+                              <div className="text-white font-semibold">
                                 {segment.name}
                               </div>
-                              <div className="campaign-segment-item-desc">
+                              <div className="text-zinc-300 text-xs mt-1">
                                 {segment.description || 'No description'}
                               </div>
                             </div>
-                            <div className="campaign-segment-item-count">
+                            <div className="bg-lime-500 text-black text-xs px-2 py-1 rounded font-semibold flex-shrink-0">
                               {getContactCount(segment)}
                             </div>
                           </div>
@@ -1033,43 +1174,41 @@ export default function Campaigns() {
                   </div>
 
                   {/* Campaign Statistics */}
-                  <div className="campaign-card-stats">
-                    <div className="campaign-card-stats-grid">
-                      <div className="campaign-card-stat-item">
-                        <div className="campaign-card-stat-value">
-                          {campaign.recipients ? campaign.recipients.length : 0}
-                        </div>
-                        <div className="campaign-card-stat-label">
-                          Recipients
-                        </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-lime-500 rounded p-4 text-center">
+                      <div className="text-black text-2xl font-bold mb-1">
+                        {campaign.recipients ? campaign.recipients.length : 0}
                       </div>
-                      <div className="campaign-card-stat-item">
-                        <div className="campaign-card-stat-value">
-                          {campaign.emailBodies ? campaign.emailBodies.length : 0}
-                        </div>
-                        <div className="campaign-card-stat-label">
-                          Email Bodies
-                        </div>
+                      <div className="text-black text-xs uppercase font-semibold">
+                        Recipients
                       </div>
-                      <div className="campaign-card-stat-item">
-                        <div className="campaign-card-stat-value">
-                          {campaign.segments ? campaign.segments.length : 0}
-                        </div>
-                        <div className="campaign-card-stat-label">
-                          Segments
-                        </div>
-                      </div>
-                      {campaign.status === 'Sent' && (
-                        <div className="campaign-card-stat-item">
-                          <div className="campaign-card-stat-value">
-                            100%
-                          </div>
-                          <div className="campaign-card-stat-label">
-                            Delivered
-                          </div>
-                        </div>
-                      )}
                     </div>
+                    <div className="bg-lime-500 rounded p-4 text-center">
+                      <div className="text-black text-2xl font-bold mb-1">
+                        {campaign.emailBodies ? campaign.emailBodies.length : 0}
+                      </div>
+                      <div className="text-black text-xs uppercase font-semibold">
+                        Email Bodies
+                      </div>
+                    </div>
+                    <div className="bg-lime-500 rounded p-4 text-center">
+                      <div className="text-black text-2xl font-bold mb-1">
+                        {campaign.segments ? campaign.segments.length : 0}
+                      </div>
+                      <div className="text-black text-xs uppercase font-semibold">
+                        Segments
+                      </div>
+                    </div>
+                    {campaign.status === 'Sent' && (
+                      <div className="bg-green-900 rounded p-4 text-center">
+                        <div className="text-green-300 text-2xl font-bold mb-1">
+                          100%
+                        </div>
+                        <div className="text-green-400 text-xs uppercase font-semibold">
+                          Delivered
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

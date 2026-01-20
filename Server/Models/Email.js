@@ -1,11 +1,38 @@
 const mongoose = require('mongoose');
 
-const EmployeeSchema = new mongoose.Schema({
-    name: String,
-    email: String,
-    password: String
-});
+/**
+ * User/Account Model
+ * Stores user authentication credentials
+ * This is for system users, NOT email recipients
+ */
+const UserSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 6
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+}, { timestamps: true });
 
-const EmployeeModel = mongoose.model("emails", EmployeeSchema);
+const UserModel = mongoose.model("emails", UserSchema);
 
-module.exports = EmployeeModel;
+module.exports = UserModel;

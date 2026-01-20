@@ -1,56 +1,98 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verification Template</title>
-    <link rel="stylesheet" href="../index.css">
+  <meta charset="UTF-8" />
+  <title>{{subject}}</title>
 </head>
-<body>
-    <div class="email-body-editor-main-container">
-        <div class="email-body-editor-templates-preview-container">
-            <div class="email-body-editor-templates-preview-card">
-                <!-- Icon -->
-                <div class="email-body-editor-template-card-icon-large">📬</div>
-                
-                <!-- Title -->
-                <h1 class="email-body-editor-template-card-title-large">Please verify your email 😊</h1>
-                
-                <!-- Description -->
-                <p class="email-body-editor-template-card-description-large">
-                    To use X, click the verification button. This helps keep your account secure.
-                </p>
-                
-                <!-- Button -->
-                <div style="margin: 30px 0;">
-                    <button class="email-body-editor-template-card-button-large">Verify my account</button>
-                </div>
-                
-                <!-- Warning Message -->
-                <div class="email-body-editor-template-preview-content">
-                    <p class="email-body-editor-preview-label">Important Notice:</p>
-                    <div style="background-color: #f9f9f9; border-left: 4px solid #4169E1; padding: 15px; margin: 0; border-radius: 4px;">
-                        <p style="margin: 0; color: #555; font-size: 13px; line-height: 1.5;">
-                            You're receiving this email because you have an account in X. If you are sure you're receiving this, 
-                            please contact us by replying to this email.
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Footer Info -->
-                <div style="background-color: #f0f0f0; padding: 15px; margin-top: 20px; border-radius: 6px; font-size: 12px; color: #888;">
-                    <p style="margin: 0; line-height: 1.6;">
-                        Email verification can X a limitless tool to design emails for desktop and mobile. 
-                        Send customized emails to your customers from any ESP.
-                    </p>
-                </div>
-                
-                <!-- Signature -->
-                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 12px;">
-                    <p style="margin: 5px 0;">Best regards,<br><strong>Your Company Team</strong></p>
-                </div>
-            </div>
-        </div>
-    </div>
+<body style="margin:0; padding:0; background-color:#eeeeee; font-family: Arial, sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eeeeee; padding:20px 0;">
+    <tr>
+      <td align="center">
+
+        <!-- Main Container -->
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:6px; overflow:hidden; border:1px solid #dddddd;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#f9f9f9; padding:20px; text-align:center; border-bottom:1px solid #e0e0e0;">
+              <img src="{{companyLogo}}" alt="Company Logo" style="max-height:50px; max-width:200px; margin-bottom:10px;" />
+              <div style="font-size:16px; font-weight:bold; color:#333333;">
+                {{companyName}}
+              </div>
+            </td>
+          </tr>
+
+          <!-- Meta Info -->
+          <tr>
+            <td style="background-color:#f5f5f5; padding:15px 20px; font-size:12px; color:#666666; border-bottom:1px solid #e0e0e0;">
+              <div><strong>From:</strong> {{fromName}} &lt;{{fromEmail}}&gt;</div>
+              <div style="margin-top:6px;"><strong>Subject:</strong> {{subject}}</div>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding:30px 20px; font-size:14px; color:#333333; line-height:1.6;">
+              
+              <!-- EMAIL CONTENT START -->
+              <h2>Welcome to our service!</h2>
+
+              <p>
+                We’re excited to have you on board. Click the button below to get started.
+              </p>
+
+              <p style="text-align:center; margin:30px 0;">
+                <a href="{{actionLink}}" 
+                   style="background-color:#4CAF50; color:#ffffff; text-decoration:none; padding:12px 24px; border-radius:4px; display:inline-block;">
+                  Get Started
+                </a>
+              </p>
+
+              <p>
+                If you have any questions, feel free to reply to this email.
+              </p>
+              <!-- EMAIL CONTENT END -->
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f0f0f0; padding:20px; text-align:center; font-size:11px; color:#666666; border-top:1px solid #e0e0e0;">
+
+              <!-- Signature -->
+              <div style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #dddddd;">
+                {{signature}}
+              </div>
+
+              <!-- Contact -->
+              <div style="line-height:1.8;">
+                <a href="{{website}}" style="color:#0066cc; text-decoration:none;">{{website}}</a><br/>
+                <a href="mailto:{{companyEmail}}" style="color:#0066cc; text-decoration:none;">{{companyEmail}}</a>
+              </div>
+
+              <!-- Social Links -->
+              <div style="margin-top:10px;">
+                <a href="{{facebook}}" style="margin-right:10px; color:#0066cc; text-decoration:none;">Facebook</a>
+                <a href="{{twitter}}" style="margin-right:10px; color:#0066cc; text-decoration:none;">Twitter</a>
+                <a href="{{linkedin}}" style="margin-right:10px; color:#0066cc; text-decoration:none;">LinkedIn</a>
+                <a href="{{instagram}}" style="color:#0066cc; text-decoration:none;">Instagram</a>
+              </div>
+
+              <!-- Copyright -->
+              <div style="margin-top:10px; font-size:10px; color:#999999;">
+                © {{year}} {{companyName}}. All rights reserved.
+              </div>
+
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>
