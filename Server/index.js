@@ -412,26 +412,52 @@ app.delete('/email-templates/:id', async (req, res) => {
 
 
 
-// Email campaign routes
+// ========== EMAIL CAMPAIGN ROUTES ==========
+
+// GET all campaigns
 app.get('/email-campaigns', async (req, res) => {
     try {
         const campaigns = await EmailCampaign.find()
-        .populate('emailBodies')
-        .populate('targetSegments')
-        .sort({ createdAt: -1 });
+            .populate('emailBodies')
+            .populate('targetSegments')
+            .sort({ createdAt: -1 });
         res.json(campaigns);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching campaigns', error: error.message });
     }
 });
 
+// GET single campaign by ID
+app.get('/email-campaigns/:id', async (req, res) => {
+    try {
+        const campaign = await EmailCampaign.findById(req.params.id)
+            .populate('emailBodies')
+            .populate('targetSegments');
+        
+        if (!campaign) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+        
+        res.json(campaign);
+    } catch (error) {
+        console.error('Campaign fetch error:', error);
+        res.status(500).json({ message: 'Error fetching campaign', error: error.message });
+    }
+});
+
+// CREATE campaign
 app.post('/email-campaigns', async (req, res) => {
     try {
         const { 
             name, 
             description, 
-            emailBodies, 
+            emailBodies,
+            emailBodySequence,
             targetSegments,
+            recipients,
+            totalRecipients,
+            status,
+            scheduledAt,
             subject,
             fromName,
             fromEmail,
@@ -444,8 +470,13 @@ app.post('/email-campaigns', async (req, res) => {
         const campaign = new EmailCampaign({
             name,
             description,
-            emailBodies,
-            targetSegments,
+            emailBodies: emailBodies || [],
+            emailBodySequence: emailBodySequence || emailBodies || [],
+            targetSegments: targetSegments || [],
+            recipients: recipients || [],
+            totalRecipients: totalRecipients || (recipients?.length || 0),
+            status: status || 'Draft',
+            scheduledAt: scheduledAt || null,
             subject: subject || name,
             fromName: fromName || companyInfo?.companyName || 'Mail Marketing',
             fromEmail: fromEmail || companyInfo?.email || 'noreply@example.com',
@@ -455,19 +486,165 @@ app.post('/email-campaigns', async (req, res) => {
         await campaign.save();
         
         const populatedCampaign = await EmailCampaign.findById(campaign._id)
-        .populate('emailBodies')
-        .populate('targetSegments');
+            .populate('emailBodies')
+            .populate('targetSegments');
         
         res.json({ message: 'Campaign created successfully', campaign: populatedCampaign });
     } catch (error) {
+        console.error('Campaign creation error:', error);
         res.status(500).json({ message: 'Error creating campaign', error: error.message });
     }
 });
 
+// UPDATE campaign (full update)
+app.put('/email-campaigns/:id', async (req, res) => {
+    try {
+        const { 
+            name, 
+            description, 
+            emailBodies,
+            emailBodySequence,
+            targetSegments,
+            recipients,
+            totalRecipients,
+            status,
+            scheduledAt,
+            subject,
+            fromName,
+            fromEmail,
+            replyTo
+        } = req.body;
+        
+        const campaign = await EmailCampaign.findByIdAndUpdate(
+            req.params.id,
+            {
+                name,
+                description,
+                emailBodies: emailBodies || [],
+                emailBodySequence: emailBodySequence || emailBodies || [],
+                targetSegments: targetSegments || [],
+                recipients: recipients || [],
+                totalRecipients: totalRecipients || (recipients?.length || 0),
+                status: status || 'Draft',
+                scheduledAt: scheduledAt || null,
+                subject: subject || name,
+                fromName: fromName,
+                fromEmail: fromEmail,
+                replyTo: replyTo,
+                updatedAt: new Date()
+            },
+            { new: true, runValidators: true }
+        )
+            .populate('emailBodies')
+            .populate('targetSegments');
+        
+        if (!campaign) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+        
+        res.json({ message: 'Campaign updated successfully', campaign });
+    } catch (error) {
+        console.error('Campaign update error:', error);
+        res.status(500).json({ message: 'Error updating campaign', error: error.message });
+    }
+});
+
+// PATCH campaign (partial update)
+app.patch('/email-campaigns/:id', async (req, res) => {
+    try {
+        const campaign = await EmailCampaign.findByIdAndUpdate(
+            req.params.id,
+            { ...req.body, updatedAt: new Date() },
+            { new: true, runValidators: true }
+        )
+            .populate('emailBodies')
+            .populate('targetSegments');
+        
+        if (!campaign) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+        
+        res.json({ message: 'Campaign updated successfully', campaign });
+    } catch (error) {
+        console.error('Campaign patch error:', error);
+        res.status(500).json({ message: 'Error patching campaign', error: error.message });
+    }
+});
+
+// DELETE single campaign
+app.delete('/email-campaigns/:id', async (req, res) => {
+    try {
+        const campaign = await EmailCampaign.findByIdAndDelete(req.params.id);
+        
+        if (!campaign) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+        
+        res.json({ message: 'Campaign deleted successfully', campaign });
+    } catch (error) {
+        console.error('Campaign deletion error:', error);
+        res.status(500).json({ message: 'Error deleting campaign', error: error.message });
+    }
+});
+
+// BULK DELETE campaigns
+app.post('/email-campaigns/delete-many', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: 'No campaign IDs provided' });
+        }
+        
+        const result = await EmailCampaign.deleteMany({ _id: { $in: ids } });
+        
+        res.json({ 
+            message: 'Campaigns deleted successfully',
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Bulk delete error:', error);
+        res.status(500).json({ message: 'Error deleting campaigns', error: error.message });
+    }
+});
+
+// GET campaign statistics
+app.get('/email-campaigns/stats/overview', async (req, res) => {
+    try {
+        const stats = await EmailCampaign.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalCampaigns: { $sum: 1 },
+                    draftCampaigns: {
+                        $sum: { $cond: [{ $eq: ['$status', 'Draft'] }, 1, 0] }
+                    },
+                    sentCampaigns: {
+                        $sum: { $cond: [{ $eq: ['$status', 'Sent'] }, 1, 0] }
+                    },
+                    scheduledCampaigns: {
+                        $sum: { $cond: [{ $eq: ['$status', 'Scheduled'] }, 1, 0] }
+                    },
+                    totalRecipients: { $sum: '$totalRecipients' },
+                    totalEmailsSent: { $sum: '$emailsSent' },
+                    totalOpens: { $sum: '$analytics.opens' },
+                    totalClicks: { $sum: '$analytics.clicks' }
+                }
+            }
+        ]);
+        
+        res.json(stats[0] || {});
+    } catch (error) {
+        console.error('Stats fetch error:', error);
+        res.status(500).json({ message: 'Error fetching statistics', error: error.message });
+    }
+});
+
+// PREPARE campaign (populate recipients from segments)
 app.post('/email-campaigns/:id/prepare', async (req, res) => {
     try {
         const campaign = await EmailCampaign.findById(req.params.id)
-        .populate('targetSegments');
+            .populate('targetSegments');
         
         if (!campaign) {
             return res.status(404).json({ message: 'Campaign not found' });
@@ -513,6 +690,7 @@ app.post('/email-campaigns/:id/prepare', async (req, res) => {
     }
 });
 
+// SEND campaign (via EmailService)
 app.post('/email-campaigns/:id/send', async (req, res) => {
     try {
         const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -528,6 +706,7 @@ app.post('/email-campaigns/:id/send', async (req, res) => {
     }
 });
 
+// SEND campaign (direct post with full campaign data)
 app.post('/send-campaign', async (req, res) => {
     try {
         const { campaign } = req.body;
@@ -598,6 +777,7 @@ app.post('/send-campaign', async (req, res) => {
     }
 });
 
+// SEND TEST EMAIL
 app.post('/send-test-email', async (req, res) => {
     try {
         const { email, subject } = req.body;
@@ -635,6 +815,7 @@ app.post('/send-test-email', async (req, res) => {
     }
 });
 
+// VERIFY BREVO API
 app.get('/verify-brevo-api', async (req, res) => {
     try {
         const apiKey = process.env.BREVO_API_KEY;
@@ -678,6 +859,7 @@ app.get('/verify-brevo-api', async (req, res) => {
     }
 });
 
+// EMAIL SERVICE STATUS
 app.get('/email-service-status', (req, res) => {
     res.json({
         success: true,
@@ -691,6 +873,8 @@ app.get('/email-service-status', (req, res) => {
         ]
     });
 });
+
+// ========== END EMAIL CAMPAIGN ROUTES ==========
 
 // Analytics route
 app.get('/analytics', async (req, res) => {

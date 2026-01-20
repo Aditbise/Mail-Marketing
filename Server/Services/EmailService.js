@@ -209,9 +209,9 @@ class EmailService {
       results: results,
       summary: {
         campaignName: campaign.name,
-        totalRecipients: campaign.recipients.length,
-        emailBodies: campaign.emailBodies.length,
-        segments: campaign.segments.length,
+        totalRecipients: campaign.recipients?.length || 0,
+        emailBodies: campaign.emailBodies?.length || 0,
+        segments: campaign.targetSegments?.length || campaign.segments?.length || 0,
         deliveryRate: ((successCount / (successCount + failCount)) * 100).toFixed(2) + '%'
       }
     };
