@@ -324,40 +324,7 @@ app.post('/email-templates', async (req, res) => {
 });
 
 // Get all email templates
-app.get('/email-templates', async (req, res) => {
-    try {
-        const templates = await EmailTemplateModel.find().sort({ createdAt: -1 });
-        console.log('📥 [GET /email-templates] Returning templates:', {
-            count: templates.length,
-            templates: templates.map(t => ({
-                id: t._id,
-                name: t.name,
-                subject: t.subject,
-                fromEmail: t.fromEmail,
-                hasContent: !!t.content,
-                contentLength: t.content?.length || 0,
-                contentPreview: t.content?.substring(0, 100) || 'MISSING CONTENT',
-                fullContent: t.content ? `[${t.content.length} chars]` : 'NULL'
-            }))
-        });
-        res.json(templates);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching templates', error: error.message });
-    }
-});
 
-// Get a single email template by ID
-app.get('/email-templates/:id', async (req, res) => {
-    try {
-        const template = await EmailTemplateModel.findById(req.params.id);
-        if (!template) {
-            return res.status(404).json({ message: 'Template not found' });
-        }
-        res.json(template);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching template', error: error.message });
-    }
-});
 
 // Update an email template
 app.put('/email-templates/:id', async (req, res) => {
@@ -1365,4 +1332,187 @@ app.delete('/scheduled-campaigns/:id', async (req, res) => {
 
 // ========== END SCHEDULED CAMPAIGN ROUTES ==========
 
-// Email body routes
+// ========== EMAIL BODY ROUTES ==========
+
+// Get all email bodies
+app.get('/email-templates', async (req, res) => {
+    try {
+        const bodies = await EmailBody.find({ isArchived: false }).sort({ createdAt: -1 });
+        console.log('📥 [GET /email-templates] Returning email bodies:', {
+            count: bodies.length,
+            bodies: bodies.map(b => ({
+                id: b._id,
+                name: b.name,
+                subject: b.subject,
+                hasContent: !!b.content,
+                contentLength: b.content?.length || 0
+            }))
+        });
+        res.json(bodies);
+    } catch (error) {
+        console.error('❌ Error fetching email bodies:', error);
+        res.status(500).json({ message: 'Error fetching email bodies', error: error.message });
+    }
+});
+
+// Get a single email body by ID
+app.get('/email-bodies/:id', async (req, res) => {
+    try {
+        const body = await EmailBody.findById(req.params.id);
+        if (!body) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+        res.json(body);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching email body', error: error.message });
+    }
+});
+
+// Create a new email body
+app.post('/email-bodies', uploadEmailBodyFiles.array('attachments'), async (req, res) => {
+    try {
+        const { name, content, subject, contentType, tags } = req.body;
+        
+        if (!name || !content) {
+            return res.status(400).json({ message: 'Name and content are required' });
+        }
+
+        const newBody = new EmailBody({
+            name,
+            content,
+            subject: subject || name,
+            contentType: contentType || 'html',
+            tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+            attachments: req.files ? req.files.map(file => ({
+                filename: file.filename,
+                originalName: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size,
+                path: file.path
+            })) : []
+        });
+
+        const savedBody = await newBody.save();
+        console.log('✅ Email body created:', { id: savedBody._id, name: savedBody.name });
+        res.json(savedBody);
+    } catch (error) {
+        console.error('❌ Error creating email body:', error);
+        res.status(500).json({ message: 'Error creating email body', error: error.message });
+    }
+});
+
+// Update an email body
+app.put('/email-bodies/:id', uploadEmailBodyFiles.array('attachments'), async (req, res) => {
+    try {
+        const { name, content, subject, contentType, tags } = req.body;
+        
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (content) updateData.content = content;
+        if (subject) updateData.subject = subject;
+        if (contentType) updateData.contentType = contentType;
+        if (tags) updateData.tags = tags.split(',').map(tag => tag.trim());
+        
+        if (req.files && req.files.length > 0) {
+            updateData.attachments = req.files.map(file => ({
+                filename: file.filename,
+                originalName: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size,
+                path: file.path
+            }));
+        }
+        
+        updateData.updatedAt = new Date();
+
+        const updatedBody = await EmailBody.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        );
+
+        if (!updatedBody) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+
+        console.log('✅ Email body updated:', { id: updatedBody._id, name: updatedBody.name });
+        res.json(updatedBody);
+    } catch (error) {
+        console.error('❌ Error updating email body:', error);
+        res.status(500).json({ message: 'Error updating email body', error: error.message });
+    }
+});
+
+// Delete an email body
+app.delete('/email-bodies/:id', async (req, res) => {
+    try {
+        const deletedBody = await EmailBody.findByIdAndDelete(req.params.id);
+        if (!deletedBody) {
+            return res.status(404).json({ message: 'Email body not found' });
+        }
+        console.log('✅ Email body deleted:', { id: deletedBody._id, name: deletedBody.name });
+        res.json({ message: 'Email body deleted successfully', id: deletedBody._id });
+    } catch (error) {
+        console.error('❌ Error deleting email body:', error);
+        res.status(500).json({ message: 'Error deleting email body', error: error.message });
+    }
+});
+// Seed sample email bodies (for development/testing)
+app.post('/seed-email-bodies', async (req, res) => {
+    try {
+        // Check if bodies already exist
+        const existingCount = await EmailBody.countDocuments();
+        if (existingCount > 0) {
+            return res.json({ message: 'Email bodies already exist', count: existingCount });
+        }
+
+        const sampleBodies = [
+            {
+                name: 'Welcome Email - Part 1',
+                subject: 'Welcome to Our Platform!',
+                content: '<h1>Welcome!</h1><p>Thank you for joining us. This is the first email in our welcome series.</p><p>We\'re excited to have you on board.</p>',
+                contentType: 'html',
+                tags: ['welcome', 'series', 'part1']
+            },
+            {
+                name: 'Welcome Email - Part 2',
+                subject: 'Getting Started - Part 2',
+                content: '<h1>Getting Started</h1><p>Now that you\'re set up, here\'s how to make the most of our platform.</p><p>Check out our features guide to learn more.</p>',
+                contentType: 'html',
+                tags: ['welcome', 'series', 'part2']
+            },
+            {
+                name: 'Welcome Email - Part 3',
+                subject: 'Pro Tips - Part 3',
+                content: '<h1>Pro Tips for Success</h1><p>Here are some expert tips to help you get the most out of our platform.</p><p>Good luck, and feel free to reach out if you have questions!</p>',
+                contentType: 'html',
+                tags: ['welcome', 'series', 'part3']
+            },
+            {
+                name: 'Promotional Offer',
+                subject: 'Exclusive 50% Off Offer',
+                content: '<h1>Limited Time Offer</h1><p>Get 50% off your first month - exclusively for you!</p><p>Use code: WELCOME50 at checkout.</p>',
+                contentType: 'html',
+                tags: ['promo', 'discount']
+            },
+            {
+                name: 'Product Update',
+                subject: 'New Features Released',
+                content: '<h1>Exciting New Features</h1><p>We\'ve just released new features that will transform your workflow.</p><p>Learn about them here and upgrade your experience today.</p>',
+                contentType: 'html',
+                tags: ['update', 'features']
+            }
+        ];
+
+        const createdBodies = await EmailBody.insertMany(sampleBodies);
+        console.log('✅ Sample email bodies created:', createdBodies.length);
+        res.json({ 
+            message: 'Sample email bodies created successfully',
+            count: createdBodies.length,
+            bodies: createdBodies.map(b => ({ id: b._id, name: b.name }))
+        });
+    } catch (error) {
+        console.error('❌ Error seeding email bodies:', error);
+        res.status(500).json({ message: 'Error seeding email bodies', error: error.message });
+    }
+});
