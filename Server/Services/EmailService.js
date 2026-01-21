@@ -224,16 +224,29 @@ class EmailService {
       content = '<p>No content provided</p>';
     }
     
+    // Handle companyInfo - ensure it's an object, not a string
+    let company = companyInfo;
+    if (typeof companyInfo === 'string') {
+      try {
+        company = JSON.parse(companyInfo);
+      } catch (e) {
+        company = { name: companyInfo };
+      }
+    }
+    if (!company || typeof company !== 'object') {
+      company = {};
+    }
+    
     // Use companyInfo from database, fallback to placeholder if not available
-    const companyName = companyInfo?.companyName || companyInfo?.name || '[Company Name]';
+    const companyName = (company.companyName || company.name || '[Company Name]').toString().trim();
     
     return content
-      .replace(/\{name\}/g, recipient.name || 'Valued Recipient')
-      .replace(/\{email\}/g, recipient.email)
-      .replace(/\{company\}/g, recipient.company || 'Your Company')
-      .replace(/\{position\}/g, recipient.position || 'Professional')
+      .replace(/\{name\}/g, (recipient.name || 'Valued Recipient').toString())
+      .replace(/\{email\}/g, (recipient.email || '').toString())
+      .replace(/\{company\}/g, (recipient.company || 'Your Company').toString())
+      .replace(/\{position\}/g, (recipient.position || 'Professional').toString())
       .replace(/\{companyName\}/g, companyName)
-      .replace(/\{firstName\}/g, (recipient.name || '').split(' ')[0] || 'Friend');
+      .replace(/\{firstName\}/g, ((recipient.name || '').split(' ')[0] || 'Friend').toString());
   }
 
   wrapInTemplate(emailBody, companyInfo, subject) {
@@ -258,32 +271,46 @@ class EmailService {
     // Build company address if available
     let addressHtml = '';
     if (company.address || company.street1 || company.street2) {
-      const addr = company.address || `${company.street1 || ''} ${company.street2 || ''}`.trim();
-      if (addr) {
+      let addr = company.address;
+      
+      // If address is an object, skip it. Only accept strings.
+      if (typeof addr !== 'string') {
+        addr = '';
+      }
+      
+      // If no address string, try building from street fields
+      if (!addr) {
+        const street1 = typeof company.street1 === 'string' ? company.street1 : '';
+        const street2 = typeof company.street2 === 'string' ? company.street2 : '';
+        addr = `${street1} ${street2}`.trim();
+      }
+      
+      if (addr && typeof addr === 'string') {
         addressHtml = `<span>${addr}</span><br/>`;
       }
     }
 
     // Get proper company name (use companyName field if available, fallback to name)
-    const companyName = company.companyName || company.name || '[Company Name Not Set]';
-    const companyEmail = company.email || company.companyEmail || 'contact@company.com';
+    const companyName = (company.companyName || company.name || '[Company Name Not Set]').toString().trim();
+    const companyEmail = (company.email || company.companyEmail || 'contact@company.com').toString().trim();
 
     console.log('🎨 Template Wrapping - Company Info:', {
       name: companyName,
       email: companyEmail,
       hasLogo: !!logoHtml,
       hasAddress: !!addressHtml,
-      rawCompanyInfo: company
+      companyType: typeof company,
+      companyKeys: Object.keys(company).slice(0, 5)
     });
 
     // Wrap in template and replace all placeholders
     let wrappedHtml = EMAIL_TEMPLATE
-      .replace(/\{\{emailBody\}\}/g, emailBody)
-      .replace(/\{\{subject\}\}/g, subject || 'Newsletter')
-      .replace(/\{\{companyLogo\}\}/g, logoHtml)
-      .replace(/\{\{companyName\}\}/g, companyName)
-      .replace(/\{\{companyEmail\}\}/g, companyEmail)
-      .replace(/\{\{companyAddress\}\}/g, addressHtml);
+      .replace(/\{\{emailBody\}\}/g, emailBody || '')
+      .replace(/\{\{subject\}\}/g, (subject || 'Newsletter').toString().trim())
+      .replace(/\{\{companyLogo\}\}/g, logoHtml || '')
+      .replace(/\{\{companyName\}\}/g, companyName || '[Company Name]')
+      .replace(/\{\{companyEmail\}\}/g, companyEmail || 'contact@company.com')
+      .replace(/\{\{companyAddress\}\}/g, addressHtml || '');
     
     return wrappedHtml;
   }
