@@ -42,6 +42,7 @@ export default function Campaigns() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingCampaign, setSendingCampaign] = useState(null);
+  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState(null);
   
   // ========== SCHEDULING STATE ==========
@@ -533,7 +534,8 @@ export default function Campaigns() {
       name: campaignWithReplacedContent.name,
       recipientsCount: campaignWithReplacedContent.recipients?.length || 0,
       emailBodiesCount: campaignWithReplacedContent.emailBodies?.length || 0,
-      companyInfoInCampaign: campaignWithReplacedContent.companyInfo
+      totalEmailsToSend: (campaignWithReplacedContent.recipients?.length || 0) * campaignWithReplacedContent.emailBodies?.length || 0,
+      estimatedTime: ((campaignWithReplacedContent.recipients?.length || 0) * campaignWithReplacedContent.emailBodies?.length * 10) / 60 + ' minutes'
     });
 
     const response = await axios.post(ENDPOINTS.sendCampaign, { campaign: campaignWithReplacedContent });
@@ -571,20 +573,25 @@ export default function Campaigns() {
       return;
     }
 
-    const confirmMessage = `Send campaign "${campaign.name}" to ${campaign.recipients.length} recipients?`;
+    const totalEmails = (campaign.recipients?.length || 0) * (campaign.emailBodies?.length || 0);
+    const estimatedMinutes = Math.ceil((totalEmails * 10) / 60);
+    
+    const confirmMessage = `Send campaign "${campaign.name}" to ${campaign.recipients.length} recipients with ${campaign.emailBodies?.length || 0} email bodies each?\n\nTotal emails: ${totalEmails}\nEstimated time: ~${estimatedMinutes} minutes (10s between each email)`;
     if (!window.confirm(confirmMessage)) return;
 
     setSendingCampaign(campaignId);
+    setSendProgress({ current: 0, total: totalEmails });
 
     try {
       await sendCampaignToServer(campaignWithInfo);
       updateCampaignStatus(campaignId, campaign.recipients.length);
-      alert(`Campaign "${campaign.name}" sent successfully to ${campaign.recipients.length} recipients!`);
+      alert(`Campaign "${campaign.name}" sent successfully!\n${totalEmails} emails sent over ~${estimatedMinutes} minutes`);
     } catch (error) {
       console.error('Campaign send error:', error);
       alert(`Failed to send campaign: ${error.message}`);
     } finally {
       setSendingCampaign(null);
+      setSendProgress({ current: 0, total: 0 });
     }
   }, [campaigns, companyInfo, validateCampaignSend, sendCampaignToServer, updateCampaignStatus]);
 
@@ -1260,8 +1267,14 @@ export default function Campaigns() {
                     {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                       {sendingCampaign === campaign._id ? (
-                        <div className="bg-zinc-700 text-white px-4 py-2 rounded font-semibold text-center">
-                          Sending...
+                        <div className="bg-zinc-700 text-white px-4 py-2 rounded font-semibold text-center w-full">
+                          <div className="mb-2">Sending... ({sendProgress.current}/{sendProgress.total})</div>
+                          <div className="w-full bg-zinc-600 rounded-full h-2">
+                            <div 
+                              className="bg-lime-500 h-2 rounded-full transition-all duration-300"
+                              style={{width: sendProgress.total > 0 ? `${(sendProgress.current / sendProgress.total) * 100}%` : '0%'}}
+                            />
+                          </div>
                         </div>
                       ) : (
                         <>

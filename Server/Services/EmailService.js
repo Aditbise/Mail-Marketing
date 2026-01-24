@@ -94,13 +94,11 @@ class EmailService {
     });
     
     // Use emailBodySequence if available (respects user's email order)
-    // emailBodySequence contains IDs, so map them back to the full emailBodies objects
     let emailSequence = campaign.emailBodies;
     if (campaign.emailBodySequence && campaign.emailBodySequence.length > 0) {
-      // emailBodySequence is an array of IDs - map them to the full email body objects
       emailSequence = campaign.emailBodySequence
         .map(bodyId => campaign.emailBodies.find(body => body._id === bodyId || body._id?.toString() === bodyId))
-        .filter(Boolean); // Remove any null/undefined entries
+        .filter(Boolean);
       console.log(`📋 Using email sequence: YES (from user selection) - mapped ${campaign.emailBodySequence.length} IDs to ${emailSequence.length} email bodies`);
     } else {
       console.log(`📋 Using email sequence: NO (using default order)`);
@@ -118,89 +116,103 @@ class EmailService {
     const results = [];
     let successCount = 0;
     let failCount = 0;
-    
+    let emailCount = 0;
+    const totalEmails = campaign.recipients.length * emailSequence.length;
+
+    // Create a flat list of (recipient, emailBody) pairs to send sequentially
+    const emailQueue = [];
     for (const recipient of campaign.recipients) {
-      // Send each email in the sequence to the recipient
-      for (let sequenceIndex = 0; sequenceIndex < emailSequence.length; sequenceIndex++) {
-        const emailBody = emailSequence[sequenceIndex];
-        try {
-          const personalizedContent = this.personalizeEmail(
-            emailBody.content, 
-            recipient, 
-            campaign.companyInfo
-          );
+      for (const emailBody of emailSequence) {
+        emailQueue.push({ recipient, emailBody });
+      }
+    }
 
-          // Wrap in professional HTML template
-          const wrappedContent = this.wrapInTemplate(
-            personalizedContent,
-            campaign.companyInfo,
-            emailBody.subject
-          );
-          console.log(`  Body: ${emailBody.name || 'Untitled'}`);
-          console.log(`Content type: ${typeof personalizedContent}`);
-          console.log(`Content length: ${personalizedContent.length}`);
-          console.log(`First 200 chars: ${personalizedContent.substring(0, 200)}`);
-          console.log(`Contains HTML tags: ${/<[^>]+>/.test(personalizedContent)}`);
-          
-          // Nodemailer email payload
-          const mailOptions = {
-            from: emailBody.fromEmail || process.env.SMTP_FROM || 'noreply@localhost',
-            to: recipient.email,
-            subject: emailBody.subject || 'Newsletter',
-            html: wrappedContent,
-            text: this.stripHtml(personalizedContent),
-            // Add headers for better email structure
-            headers: {
-              'List-Unsubscribe': `<mailto:${campaign.companyInfo?.email || 'noreply@localhost'}>`
-            }
-          };
+    console.log(`\n📊 Email queue created: ${emailQueue.length} total emails to send sequentially`);
+    console.log(`   Recipients: ${campaign.recipients.length}, Email Bodies: ${emailSequence.length}`);
+    
+    // Send each email with 10-second delay between them
+    for (const { recipient, emailBody } of emailQueue) {
+      emailCount++;
+      try {
+        console.log(`\n⏱️  [${emailCount}/${totalEmails}] Processing email...`);
+        
+        const personalizedContent = this.personalizeEmail(
+          emailBody.content, 
+          recipient, 
+          campaign.companyInfo
+        );
 
-          console.log(`\n📤 Sending SMTP email:`);
-          console.log(`  To: ${mailOptions.to}`);
-          console.log(`  From: ${mailOptions.from}`);
-          console.log(`  Subject: ${mailOptions.subject}`);
-          console.log(`  HTML Content Length: ${mailOptions.html.length}`);
-          console.log(`  Has HTML: ${mailOptions.html.includes('<')}`);
-          
-          const info = await this.transporter.sendMail(mailOptions);
-          
-          console.log(`✅ SMTP Response:`);
-          console.log(`✅ Message ID: ${info.messageId}`);
-          console.log(`✅ Accepted: ${info.accepted}`);
-          
-          results.push({
-            email: recipient.email,
-            name: recipient.name,
-            success: true,
-            messageId: info.messageId,
-            timestamp: new Date()
-          });
-          
-          successCount++;
-          console.log(`✅ Sent successfully to: ${recipient.email} (ID: ${info.messageId})\n`);
-          
-          // Small delay to be respectful to API
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-        } catch (error) {
-          console.error(`❌ Failed to send to ${recipient.email}:`);
-          console.error(`   Status: ${error.response?.status}`);
-          console.error(`   Error Data: ${JSON.stringify(error.response?.data)}`);
-          console.error(`   Message: ${error.message}`);
-          results.push({
-            email: recipient.email,
-            name: recipient.name,
-            success: false,
-            error: error.response?.data?.message || error.message,
-            errorDetails: error.response?.data,
-            timestamp: new Date()
-          });
-          failCount++;
+        // Wrap in professional HTML template
+        const wrappedContent = this.wrapInTemplate(
+          personalizedContent,
+          campaign.companyInfo,
+          emailBody.subject
+        );
+        
+        // Nodemailer email payload
+        const mailOptions = {
+          from: emailBody.fromEmail || process.env.SMTP_FROM || 'noreply@localhost',
+          to: recipient.email,
+          subject: emailBody.subject || 'Newsletter',
+          html: wrappedContent,
+          text: this.stripHtml(personalizedContent),
+          headers: {
+            'List-Unsubscribe': `<mailto:${campaign.companyInfo?.email || 'noreply@localhost'}>`
+          }
+        };
+
+        console.log(`📤 Sending SMTP email [${emailCount}/${totalEmails}]:`);
+        console.log(`   To: ${mailOptions.to}`);
+        console.log(`   Subject: ${mailOptions.subject}`);
+        console.log(`   Body: ${emailBody.name || 'Untitled'}`);
+        
+        const info = await this.transporter.sendMail(mailOptions);
+        
+        console.log(`✅ Email sent successfully!`);
+        console.log(`   Message ID: ${info.messageId}`);
+        
+        results.push({
+          email: recipient.email,
+          name: recipient.name,
+          bodyName: emailBody.name,
+          success: true,
+          messageId: info.messageId,
+          timestamp: new Date()
+        });
+        
+        successCount++;
+        
+        // Wait 10 seconds before next email (except for the last one)
+        if (emailCount < totalEmails) {
+          console.log(`⏳ Waiting 10 seconds before next email (${emailCount}/${totalEmails})...`);
+          await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+        
+      } catch (error) {
+        console.error(`❌ Failed to send email [${emailCount}/${totalEmails}]:`);
+        console.error(`   To: ${emailQueue[emailCount - 1].recipient.email}`);
+        console.error(`   Error: ${error.message}`);
+        
+        results.push({
+          email: emailQueue[emailCount - 1].recipient.email,
+          name: emailQueue[emailCount - 1].recipient.name,
+          bodyName: emailQueue[emailCount - 1].emailBody.name,
+          success: false,
+          error: error.message,
+          timestamp: new Date()
+        });
+        
+        failCount++;
+        
+        // Still wait before next email
+        if (emailCount < totalEmails) {
+          console.log(`⏳ Waiting 10 seconds before next email despite error...`);
+          await new Promise(resolve => setTimeout(resolve, 10000));
         }
       }
     }
     
-    console.log(`🎯 Campaign completed: ${successCount} success, ${failCount} failed`);
+    console.log(`\n🎯 Campaign completed: ${successCount} success, ${failCount} failed out of ${totalEmails} total`);
     
     return {
       success: true,
@@ -212,7 +224,8 @@ class EmailService {
         totalRecipients: campaign.recipients?.length || 0,
         emailBodies: campaign.emailBodies?.length || 0,
         segments: campaign.targetSegments?.length || campaign.segments?.length || 0,
-        deliveryRate: ((successCount / (successCount + failCount)) * 100).toFixed(2) + '%'
+        totalEmails: totalEmails,
+        deliveryRate: ((successCount / totalEmails) * 100).toFixed(2) + '%'
       }
     };
   }
