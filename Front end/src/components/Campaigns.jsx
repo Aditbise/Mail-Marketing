@@ -39,6 +39,7 @@ export default function Campaigns() {
   const [selectedSegments, setSelectedSegments] = useState([]);
   const [campaignName, setCampaignName] = useState('');
   const [campaignDescription, setCampaignDescription] = useState('');
+  const [emailGap, setEmailGap] = useState(10); // Gap between emails in seconds
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingCampaign, setSendingCampaign] = useState(null);
@@ -259,6 +260,7 @@ export default function Campaigns() {
     setSelectedSegments([]);
     setCampaignName('');
     setCampaignDescription('');
+    setEmailGap(10);
     setError(null);
     setScheduleMode('immediate');
     setScheduledDate('');
@@ -412,6 +414,7 @@ export default function Campaigns() {
         targetSegments: selectedSegments,
         recipients: totalRecipients,
         totalRecipients: totalRecipients.length,
+        emailGap: emailGap,
         status: scheduleMode === 'scheduled' ? CAMPAIGN_STATUS.SCHEDULED : CAMPAIGN_STATUS.READY,
         scheduledAt: scheduleMode === 'scheduled' ? formatScheduleDateTime(scheduledDate, scheduledTime) : null
       };
@@ -452,7 +455,7 @@ export default function Campaigns() {
       const scheduleMsg = scheduleMode === 'scheduled' 
         ? ` Campaign scheduled for ${new Date(campaignData.scheduledAt).toLocaleString()}`
         : '';
-      alert(`Campaign "${campaignName}" created successfully!${scheduleMsg} Email bodies will be sent in sequence (${emailBodySequence.length} emails per recipient).`);
+      alert(`Campaign "${campaignName}" created successfully!${scheduleMsg} Email bodies will be sent in sequence (${emailBodySequence.length} emails per recipient with ${emailGap}s gap between each).`);
       setShowCreateForm(false);
       resetFormState();
       setEmailBodySequence([]);
@@ -575,9 +578,10 @@ export default function Campaigns() {
     }
 
     const totalEmails = (campaign.recipients?.length || 0) * (campaign.emailBodies?.length || 0);
-    const estimatedMinutes = Math.ceil((totalEmails * 10) / 60);
+    const gap = campaign.emailGap || 10; // Use campaign's gap or default to 10
+    const estimatedMinutes = Math.ceil((totalEmails * gap) / 60);
     
-    const confirmMessage = `Send campaign "${campaign.name}" to ${campaign.recipients.length} recipients with ${campaign.emailBodies?.length || 0} email bodies each?\n\nTotal emails: ${totalEmails}\nEstimated time: ~${estimatedMinutes} minutes (10s between each email)`;
+    const confirmMessage = `Send campaign "${campaign.name}" to ${campaign.recipients.length} recipients with ${campaign.emailBodies?.length || 0} email bodies each?\n\nTotal emails: ${totalEmails}\nEmail gap: ${gap}s\nEstimated time: ~${estimatedMinutes} minutes`;
     if (!window.confirm(confirmMessage)) return;
 
     setSendingCampaign(campaignId);
@@ -586,7 +590,7 @@ export default function Campaigns() {
     try {
       await sendCampaignToServer(campaignWithInfo);
       updateCampaignStatus(campaignId, campaign.recipients.length);
-      alert(`Campaign "${campaign.name}" sent successfully!\n${totalEmails} emails sent over ~${estimatedMinutes} minutes`);
+      alert(`Campaign "${campaign.name}" sent successfully!\n${totalEmails} emails sent over ~${estimatedMinutes} minutes (${gap}s gap between each)`);
     } catch (error) {
       console.error('Campaign send error:', error);
       alert(`Failed to send campaign: ${error.message}`);
@@ -875,6 +879,27 @@ export default function Campaigns() {
                 placeholder="Enter campaign description..."
                 className="w-full bg-zinc-700 border border-lime-600 text-white px-3 py-2 rounded focus:outline-none focus:border-lime-400"
               />
+            </div>
+
+            <div>
+              <label className="block text-lime-300 text-sm font-semibold mb-2">
+                Email Gap Between Emails (seconds):
+              </label>
+              <div className="flex gap-3 items-center">
+                <input
+                  type="number"
+                  value={emailGap}
+                  onChange={(e) => setEmailGap(Math.max(1, parseInt(e.target.value) || 1))}
+                  min="1"
+                  max="300"
+                  step="1"
+                  className="flex-1 bg-zinc-700 border border-lime-600 text-white px-3 py-2 rounded focus:outline-none focus:border-lime-400"
+                />
+                <span className="text-lime-300 text-sm font-semibold">{emailGap}s</span>
+              </div>
+              <p className="text-zinc-400 text-xs mt-2">
+                Smaller gap = faster delivery (e.g., 5-10s), Larger gap = slower delivery (e.g., 30-60s)
+              </p>
             </div>
           </div>
           
@@ -1170,6 +1195,24 @@ export default function Campaigns() {
               <h4 className="text-xl font-bold mb-4 text-lime-400">
                 Campaign Summary
               </h4>
+              
+              {/* Email Gap & Timing Info */}
+              <div className="bg-zinc-700 border-l-4 border-lime-500 rounded p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-lime-300 text-xs uppercase font-semibold mb-2">Email Gap</div>
+                    <div className="text-white text-lg font-bold">{emailGap}s</div>
+                  </div>
+                  <div>
+                    <div className="text-lime-300 text-xs uppercase font-semibold mb-2">Total Emails</div>
+                    <div className="text-white text-lg font-bold">{totalRecipients.length * selectedEmailBodies.length}</div>
+                  </div>
+                  <div>
+                    <div className="text-lime-300 text-xs uppercase font-semibold mb-2">Est. Delivery Time</div>
+                    <div className="text-white text-lg font-bold">~{Math.ceil((totalRecipients.length * selectedEmailBodies.length * emailGap) / 60)} min</div>
+                  </div>
+                </div>
+              </div>
               
               {/* Template Variables Info */}
               <div className="bg-zinc-700 border-l-4 border-lime-500 rounded p-3 mb-4 text-xs text-lime-300 font-semibold">
