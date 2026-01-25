@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const fs = require("fs");
+const cron = require("node-cron");
 
 // Database Models
 const UserModel = require('./Models/Email.js'); // User authentication (name, email, password)
@@ -954,7 +955,63 @@ function getRecentActivity(contacts, segments, campaigns) {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Start the campaign scheduler
+    startCampaignScheduler();
 });
+
+// ========== CAMPAIGN SCHEDULER ==========
+function startCampaignScheduler() {
+    console.log('🕐 Starting campaign scheduler (checks every minute)...');
+    
+    // Run every minute to check for scheduled campaigns
+    cron.schedule('* * * * *', async () => {
+        try {
+            const now = new Date();
+            
+            // Find all campaigns that are scheduled and ready to send
+            const scheduledCampaigns = await EmailCampaign.find({
+                status: 'Scheduled',
+                scheduledAt: { $lte: now }
+            }).sort({ scheduledAt: 1 });
+            
+            if (scheduledCampaigns.length > 0) {
+                console.log(`\n⏰ Found ${scheduledCampaigns.length} campaign(s) ready to send at ${now.toLocaleString()}`);
+                
+                for (const campaign of scheduledCampaigns) {
+                    try {
+                        console.log(`\n🚀 Auto-sending scheduled campaign: "${campaign.name}"`);
+                        
+                        // Send the campaign
+                        const results = await EmailService.sendCampaignEmails(campaign);
+                        
+                        // Update campaign status
+                        campaign.status = 'Sent';
+                        campaign.sentAt = new Date();
+                        campaign.deliveryStatus = 'Completed';
+                        await campaign.save();
+                        
+                        console.log(`✅ Scheduled campaign "${campaign.name}" sent successfully!`);
+                        console.log(`   Sent to: ${results.totalSent} recipients`);
+                        console.log(`   Failed: ${results.totalFailed}`);
+                        
+                    } catch (error) {
+                        console.error(`❌ Error sending scheduled campaign "${campaign.name}":`, error.message);
+                        
+                        // Update status to indicate error but don't fail permanently
+                        campaign.status = 'Ready to Send'; // Allow manual retry
+                        campaign.deliveryStatus = 'Error - ' + error.message;
+                        await campaign.save();
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error in campaign scheduler:', error);
+        }
+    });
+    
+    console.log('✅ Campaign scheduler started successfully');
+}
 
 
 

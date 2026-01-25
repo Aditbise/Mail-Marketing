@@ -50,6 +50,7 @@ export default function Campaigns() {
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [scheduledCampaigns, setScheduledCampaigns] = useState([]);
+  const [countdowns, setCountdowns] = useState({});
 
   // ========== API & DATA FUNCTIONS ==========
   const fetchEmailBodies = useCallback(async () => {
@@ -741,8 +742,8 @@ export default function Campaigns() {
       const now = new Date();
       const campaignsToSend = campaigns.filter(campaign => 
         campaign.status === CAMPAIGN_STATUS.SCHEDULED && 
-        campaign.scheduledFor &&
-        new Date(campaign.scheduledFor) <= now
+        campaign.scheduledAt &&
+        new Date(campaign.scheduledAt) <= now
       );
       
       for (const campaign of campaignsToSend) {
@@ -777,6 +778,46 @@ export default function Campaigns() {
     checkScheduledCampaigns(); // Check immediately on mount
     return () => clearInterval(interval);
   }, [campaigns, replaceTemplateVariables]);
+
+  // ========== COUNTDOWN TIMER EFFECT ==========
+  useEffect(() => {
+    const updateCountdowns = () => {
+      const newCountdowns = {};
+      const now = new Date();
+      
+      campaigns.forEach(campaign => {
+        if (campaign.status === CAMPAIGN_STATUS.SCHEDULED && campaign.scheduledAt) {
+          const scheduledTime = new Date(campaign.scheduledAt);
+          const diff = scheduledTime - now;
+          
+          if (diff > 0) {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            newCountdowns[campaign._id] = {
+              days,
+              hours,
+              minutes,
+              seconds,
+              formatted: days > 0 
+                ? `${days}d ${hours}h ${minutes}m` 
+                : hours > 0 
+                ? `${hours}h ${minutes}m ${seconds}s`
+                : `${minutes}m ${seconds}s`
+            };
+          }
+        }
+      });
+      
+      setCountdowns(newCountdowns);
+    };
+    
+    updateCountdowns();
+    const interval = setInterval(updateCountdowns, 1000);
+    return () => clearInterval(interval);
+  }, [campaigns]);
 
   return (
     <div className="w-full bg-zinc-950 text-white p-6">
@@ -1254,10 +1295,17 @@ export default function Campaigns() {
                         }`}>
                           Status: {campaign.status}
                         </span>
-                        {campaign.status === CAMPAIGN_STATUS.SCHEDULED && campaign.scheduledFor && (
-                          <span title={new Date(campaign.scheduledFor).toLocaleString()}>
-                            📅 Scheduled for {new Date(campaign.scheduledFor).toLocaleDateString()} at {new Date(campaign.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                        {campaign.status === CAMPAIGN_STATUS.SCHEDULED && campaign.scheduledAt && (
+                          <div className="flex flex-col gap-1">
+                            <span title={new Date(campaign.scheduledAt).toLocaleString()} className="text-xs">
+                              📅 Scheduled: {new Date(campaign.scheduledAt).toLocaleDateString()} at {new Date(campaign.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {countdowns[campaign._id] && (
+                              <span className="text-xs font-bold text-yellow-300">
+                                ⏱️ Sending in: {countdowns[campaign._id].formatted}
+                              </span>
+                            )}
+                          </div>
                         )}
                         {campaign.sentCount > 0 && <span>Sent to: {campaign.sentCount} recipients</span>}
                         {campaign.sentAt && <span>Sent: {new Date(campaign.sentAt).toLocaleDateString()}</span>}
