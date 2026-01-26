@@ -1,6 +1,6 @@
-Email Marketing Platform - Frontend
+# Email Marketing Platform - Frontend
 
-PROGRAM STRUCTURE
+## PROGRAM STRUCTURE
 
 Front end/
   src/
@@ -28,29 +28,29 @@ Front end/
   vite.config.js
   README.md
 
-SETUP
+## SETUP
 
 1. Navigate to Front end directory
 2. Install dependencies: npm install
 3. Start development server: npm run dev
 4. Access at http://localhost:5174
 
-REQUIREMENTS
+## REQUIREMENTS
 
 Node.js 16 or higher
 npm 8 or higher
 
-ENVIRONMENT
+## ENVIRONMENT
 
 Backend API runs on http://localhost:3001
 Frontend development server runs on http://localhost:5173 or http://localhost:5174
 
-STRUCTURE
+## STRUCTURE
 
 src/components - All React components
 src/index.css - Global styles using Tailwind CSS
 
-COMPONENTS
+## COMPONENTS
 
 App.jsx - Main routing component
 Front.jsx - Landing page
@@ -64,7 +64,7 @@ Segments.jsx - Audience segmentation
 CompanyInfo.jsx - Company profile settings
 Features.jsx - Platform features display
 
-DEPENDENCIES
+## DEPENDENCIES
 
 React 19.1.0
 axios - HTTP requests
@@ -72,18 +72,18 @@ lucide-react - Icons
 Tailwind CSS 4.1.14 - Styling
 react-router-dom - Navigation
 
-STYLING
+## STYLING
 
 All components use Tailwind CSS utilities.
 Color scheme: Lime-500 accents with Zinc-950 base.
 Dark mode enabled by default.
 
-BUILD
+## BUILD
 
 Production build: npm run build
 Preview build: npm run preview
 
-NOTES
+## NOTES
 
 Backend server must be running for full functionality.
 All API calls go to http://localhost:3001

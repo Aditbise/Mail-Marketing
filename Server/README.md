@@ -1,6 +1,6 @@
-Email Marketing Platform - Server
+# Email Marketing Platform - Server
 
-PROGRAM STRUCTURE
+## PROGRAM STRUCTURE
 
 Server/
   Models/
@@ -31,7 +31,7 @@ Server/
   testFlow.js
   README.md
 
-SETUP
+## SETUP
 
 1. Navigate to Server directory
 2. Install dependencies: npm install
@@ -39,13 +39,13 @@ SETUP
 4. Start server: node index.js
 5. Server runs on http://localhost:3001
 
-REQUIREMENTS
+## REQUIREMENTS
 
 Node.js 16 or higher
 npm 8 or higher
 MongoDB (local or cloud instance)
 
-ENVIRONMENT VARIABLES
+## ENVIRONMENT VARIABLES
 
 MONGODB_URI - MongoDB connection string
 JWT_SECRET - JWT token secret key
@@ -54,7 +54,7 @@ BREVO_API_KEY - Email service API key
 BREVO_EMAIL - Sender email address
 GROQ_API_KEY - AI generation API key
 
-DATABASE
+## DATABASE
 
 MongoDB collections:
 - Users - User authentication
@@ -66,7 +66,7 @@ MongoDB collections:
 - EmailCampaigns - Campaign records
 - EmailTracking - Delivery tracking
 
-ROUTES
+## ROUTES
 
 Authentication
 POST /login - User login
@@ -104,7 +104,7 @@ POST /company-info/logo - Upload logo
 AI Generation
 POST /ai-generate-email - Generate email with AI
 
-MODELS
+## MODELS
 
 User - name, email, password
 EmailTemplate - name, subject, content, fromName, fromEmail
@@ -112,12 +112,12 @@ EmailBody - name, subject, content, tags, attachments
 Segment - name, description, contacts
 Campaign - name, emailBodies, targetSegments, recipients, status
 
-SERVICES
+## SERVICES
 
 EmailService - Handles campaign sending and delivery
 Campaign Scheduler - Auto-sends scheduled campaigns every minute
 
-NOTES
+## NOTES
 
 Mailhog runs on http://localhost:8025 for email testing
 All email operations logged to console
