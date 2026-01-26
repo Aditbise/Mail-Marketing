@@ -1,49 +1,51 @@
+import { Users, Target, Mail, Zap, BarChart3, Clock, Lock, Bolt, Check } from 'lucide-react';
+
 export default function Features() {
   const features = [
     {
-      icon: '👥',
+      icon: Users,
       title: 'Contact Management',
       description: 'Advanced contact database with CSV import, validation, and deduplication',
       status: 'Active'
     },
     {
-      icon: '🎯',
+      icon: Target,
       title: 'Smart Segmentation',
       description: 'Dynamic audience segmentation based on multiple criteria and behaviors',
       status: 'Active'
     },
     {
-      icon: '📧',
+      icon: Mail,
       title: 'Email Campaign Builder',
       description: 'Rich HTML email editor with personalization and template library',
       status: 'Active'
     },
     {
-      icon: '🚀',
+      icon: Zap,
       title: 'Automated Delivery',
       description: 'Professional email delivery via Brevo API with 99.9% uptime',
       status: 'Active'
     },
     {
-      icon: '📊',
+      icon: BarChart3,
       title: 'Analytics & Reporting',
       description: 'Comprehensive campaign analytics with delivery and engagement metrics',
       status: 'Active'
     },
     {
-      icon: '⏰',
+      icon: Clock,
       title: 'Campaign Scheduling',
       description: 'Advanced scheduling system with cron-based automation',
       status: 'Active'
     },
     {
-      icon: '🔐',
+      icon: Lock,
       title: 'Enterprise Security',
       description: 'API-key authentication and secure data handling',
       status: 'Active'
     },
     {
-      icon: '⚡',
+      icon: Bolt,
       title: 'Real-time Processing',
       description: 'Instant campaign deployment with background job processing',
       status: 'Active'
@@ -51,76 +53,36 @@ export default function Features() {
   ];
 
   return (
-    <div style={{ padding: '40px 20px', backgroundColor: '#f7fafc' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h2 style={{ 
-          textAlign: 'center', 
-          fontSize: '36px', 
-          fontWeight: 'bold', 
-          color: '#2d3748',
-          marginBottom: '16px'
-        }}>
-          🚀 Platform Features
-        </h2>
-        <p style={{ 
-          textAlign: 'center', 
-          fontSize: '18px', 
-          color: '#718096',
-          marginBottom: '40px'
-        }}>
-          Enterprise-grade email marketing capabilities
-        </p>
+    <div className="ml-0 h-screen w-screen bg-zinc-950 overflow-x-auto">
+      <div className="ml-64 h-screen overflow-y-auto flex flex-col gap-8 px-6 py-8">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-white m-0 mb-2">Platform Features</h1>
+          <p className="text-zinc-400 text-base m-0">Enterprise-grade email marketing capabilities</p>
+        </div>
         
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '20px'
-        }}>
-          {features.map((feature, index) => (
-            <div key={index} style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '24px',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.07)',
-              border: '1px solid #e2e8f0',
-              transition: 'transform 0.2s ease',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ 
-                  fontSize: '32px', 
-                  marginRight: '12px',
-                  backgroundColor: '#edf2f7',
-                  padding: '8px',
-                  borderRadius: '8px'
-                }}>
-                  {feature.icon}
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, index) => {
+            const IconComponent = feature.icon;
+            return (
+              <div key={index} className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 shadow-xl hover:border-lime-500/50 transition-all duration-300 flex flex-col gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-lime-500/20 p-3 rounded-lg flex-shrink-0">
+                    <IconComponent className="w-6 h-6 text-lime-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-white m-0">{feature.title}</h3>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Check className="w-3 h-3 text-lime-400" />
+                      <span className="text-xs font-semibold text-lime-400 uppercase">{feature.status}</span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ margin: 0, color: '#2d3748', fontSize: '18px', fontWeight: '600' }}>
-                    {feature.title}
-                  </h3>
-                  <span style={{
-                    backgroundColor: '#c6f6d5',
-                    color: '#22543d',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: '600'
-                  }}>
-                    {feature.status}
-                  </span>
-                </div>
+                <p className="text-zinc-400 text-sm m-0 leading-relaxed">{feature.description}</p>
               </div>
-              <p style={{ 
-                color: '#4a5568', 
-                lineHeight: '1.5',
-                margin: 0,
-                fontSize: '14px'
-              }}>
-                {feature.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

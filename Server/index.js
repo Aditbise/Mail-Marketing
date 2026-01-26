@@ -8,6 +8,8 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const fs = require("fs");
 const cron = require("node-cron");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Groq = require("groq-sdk");
 
 // Database Models
 const UserModel = require('./Models/Email.js'); // User authentication (name, email, password)
@@ -288,46 +290,83 @@ app.post('/segments/delete-many', async (req, res) => {
 });
 
 // Email template routes
-// Create a new email template
-app.post('/email-templates', async (req, res) => {
+// Create a new email template/body
+app.post('/email-templates', uploadEmailBodyFiles.array('attachments'), async (req, res) => {
     try {
-        const { name, subject, fromName, fromEmail, content, signature, layout, preview, heroImage, description, category, tags, replyTo, isDefault } = req.body;
-        
-        // Validate required fields
-        if (!name || !subject || !fromName || !fromEmail || !content) {
-            return res.status(400).json({ message: 'Missing required fields: name, subject, fromName, fromEmail, content' });
-        }
-        
-        const template = await EmailTemplateModel.create({
-            name,
-            subject,
+        const { 
+            name, 
+            subject, 
+            content, 
+            contentType, 
+            tags,
             fromName,
             fromEmail,
-            content,
-            signature: signature || '',
-            layout: layout || 'modern',
-            preview: preview || '',
-            heroImage: heroImage || null,
-            description: description || '',
-            category: category || 'promotional',
-            tags: tags || [],
-            replyTo: replyTo || '',
-            isDefault: isDefault || false
-        });
+            replyTo,
+            layout,
+            preview,
+            heroImage,
+            description,
+            category,
+            isDefault
+        } = req.body;
         
+        // Validate required fields
+        if (!name || !content) {
+            return res.status(400).json({ message: 'Missing required fields: name, content' });
+        }
+        
+        const newBody = new EmailBody({
+            name,
+            content,
+            subject: subject || name,
+            contentType: contentType || 'html',
+            tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim())) : [],
+            attachments: req.files ? req.files.map(file => ({
+                filename: file.filename,
+                originalName: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size,
+                path: file.path
+            })) : []
+        });
+
+        const savedBody = await newBody.save();
+        console.log('✅ Email template created:', { 
+            id: savedBody._id, 
+            name: savedBody.name, 
+            subject: savedBody.subject,
+            contentLength: savedBody.content?.length || 0 
+        });
         res.status(201).json({ 
-            message: 'Template created successfully', 
-            template 
+            message: 'Email template created successfully', 
+            template: savedBody 
         });
     } catch (err) {
-        res.status(500).json({ message: 'Error creating template', error: err.message });
+        console.error('❌ Error creating email template:', err);
+        res.status(500).json({ message: 'Error creating email template', error: err.message });
     }
 });
 
 // Get all email templates
-
-
-// Update an email template
+app.get('/email-templates', async (req, res) => {
+    try {
+        const bodies = await EmailBody.find({ isArchived: false }).sort({ createdAt: -1 });
+        console.log('📥 [GET /email-templates] Returning email templates:', {
+            count: bodies.length,
+            templates: bodies.map(b => ({
+                id: b._id,
+                name: b.name,
+                subject: b.subject,
+                hasContent: !!b.content,
+                contentLength: b.content?.length || 0
+            }))
+        });
+        res.json(bodies);
+    } catch (error) {
+        console.error('❌ Error fetching email templates:', error);
+        res.status(500).json({ message: 'Error fetching email templates', error: error.message });
+    }
+});
 app.put('/email-templates/:id', async (req, res) => {
     try {
         const { name, subject, fromName, content, signature, layout, preview, heroImage, description, isDefault } = req.body;
@@ -951,6 +990,139 @@ function getRecentActivity(contacts, segments, campaigns) {
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .slice(0, 5);
 }
+
+// ========== AI EMAIL GENERATION ==========
+
+// Test endpoint to check API status
+app.get('/ai-check-quota', async (req, res) => {
+    try {
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({ 
+                status: 'error',
+                message: 'Gemini API key not configured',
+                quota: 'unknown'
+            });
+        }
+
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        
+        // Try a simple, minimal request to check quota
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const testPrompt = 'Say "OK"';
+        
+        const result = await model.generateContent(testPrompt);
+        
+        res.json({
+            status: 'success',
+            message: 'API is working and quota is available',
+            quota: 'available',
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        const isQuotaError = err.status === 429 || err.message?.includes('quota');
+        const isModelError = err.message?.includes('not found');
+        
+        res.status(err.status || 500).json({
+            status: 'error',
+            message: err.message || 'Unknown error',
+            isQuotaExceeded: isQuotaError,
+            isModelNotFound: isModelError,
+            errorDetails: {
+                status: err.status,
+                statusText: err.statusText
+            }
+        });
+    }
+});
+
+app.post('/ai-generate-email', async (req, res) => {
+    try {
+        const { prompt } = req.body;
+
+        if (!prompt || !prompt.trim()) {
+            return res.status(400).json({ error: 'Prompt is required' });
+        }
+
+        // Use Groq API (Free tier, no quota limits)
+        if (!process.env.GROQ_API_KEY) {
+            return res.status(500).json({ 
+                error: 'Groq API key not configured',
+                instruction: 'Add GROQ_API_KEY to .env file from https://console.groq.com'
+            });
+        }
+
+        const groq = new Groq({
+            apiKey: process.env.GROQ_API_KEY
+        });
+
+        // Create the email generation prompt
+        const fullPrompt = `You are an expert email marketing copywriter. Generate a professional email based on the following user request:
+
+${prompt}
+
+Please generate ONLY the following in this exact format:
+1. A compelling email subject line (single line, no "Subject:" prefix)
+2. A blank line
+3. The email body in HTML format (start directly with HTML tags, no explanations)
+
+Make the email:
+- Engaging and professional
+- Properly formatted with HTML tags
+- Include an appropriate greeting and closing
+- Be concise but effective
+
+Do NOT include any explanations, markdown, or text outside the HTML. Start directly with the email subject, then blank line, then HTML.`;
+
+        // Call Groq API
+        const response = await groq.messages.create({
+            messages: [
+                {
+                    role: "user",
+                    content: fullPrompt
+                }
+            ],
+            model: "mixtral-8x7b-32768",
+            max_tokens: 1024
+        });
+
+        const text = response.content[0].type === 'text' ? response.content[0].text : '';
+
+        // Parse the response to extract subject and content
+        const lines = text.split('\n');
+        let subject = '';
+        let contentStart = -1;
+
+        // First non-empty line is the subject
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].trim()) {
+                subject = lines[i].trim();
+                contentStart = i + 1;
+                break;
+            }
+        }
+
+        // Skip blank lines after subject
+        while (contentStart < lines.length && !lines[contentStart].trim()) {
+            contentStart++;
+        }
+
+        // Rest is content
+        const content = lines.slice(contentStart).join('\n').trim();
+
+        if (!subject || !content) {
+            return res.status(400).json({ error: 'Failed to generate email content' });
+        }
+
+        res.json({
+            subject: subject,
+            content: content
+        });
+
+    } catch (error) {
+        console.error('❌ AI Email Generation Error:', error);
+        res.status(500).json({ error: error.message || 'Failed to generate email with AI' });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

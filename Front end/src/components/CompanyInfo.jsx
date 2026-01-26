@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Upload, X, Save } from 'lucide-react';
 
 export default function CompanyInfo() {
   const [company, setCompany] = useState({
@@ -184,226 +185,228 @@ export default function CompanyInfo() {
     setCompany(prev => ({ ...prev, logo: '' })); // Set to empty string, not false
   };
 
-  if (loading) return <div>Loading company information...</div>;
+  if (loading) return (
+    <div className="ml-0 h-screen w-screen bg-zinc-950 flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-zinc-400 text-lg">Loading company information...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px' }}>
-      <h1>Company Information</h1>
-      
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="ml-0 h-screen w-screen bg-zinc-950 overflow-x-auto">
+      <div className="ml-64 h-screen overflow-y-auto flex flex-col gap-6 px-6 py-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-4xl font-bold text-white m-0 mb-1">Company Information</h1>
+          <p className="text-zinc-400 text-sm m-0">Manage your company profile and branding</p>
+        </div>
         
-        {/* Logo Section */}
-        <section>
-          <h2>Company Logo</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleLogoChange}
-                style={{ marginBottom: '10px' }}
-              />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        
+          {/* Logo Section */}
+          <section className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-lime-400 m-0 mb-4 flex items-center gap-2"><Upload className="w-6 h-6" /> Company Logo</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              <div className="flex-1">
+                <label className="block bg-zinc-800 border-2 border-dashed border-zinc-600 rounded-lg p-4 text-center cursor-pointer hover:border-lime-500 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-lime-400" />
+                  <p className="text-zinc-300 font-semibold">Click to upload logo</p>
+                  <p className="text-zinc-500 text-xs mt-1">PNG, JPG up to 5MB</p>
+                </label>
+              </div>
               {logoPreview && (
-                <div style={{ position: 'relative', display: 'inline-block' }}>
+                <div className="relative">
                   <img
                     src={logoPreview}
                     alt="Company Logo Preview"
-                    style={{
-                      width: '120px',
-                      height: '120px',
-                      objectFit: 'contain',
-                      border: '2px solid #ddd',
-                      borderRadius: '8px',
-                      padding: '10px',
-                      backgroundColor: '#f9f9f9'
-                    }}
+                    className="w-32 h-32 object-contain border-2 border-lime-500 rounded-lg p-2 bg-zinc-800"
                     loading="lazy"
                   />
                   <button
                     type="button"
                     onClick={removeLogo}
-                    style={{
-                      position: 'absolute',
-                      top: '-10px',
-                      right: '-10px',
-                      background: '#f44336',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '20%',
-                      width: '40px',
-                      height: '40px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                    }}
-                  >X
+                    className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-8 h-8 flex items-center justify-center transition-colors"
+                    title="Remove logo"
+                  >
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               )}
             </div>
-            <div style={{ fontSize: '14px', color: '#666' }}>
-              <p>Upload your company logo</p>
-              <p>Recommended size: 200x200px</p>
-              <p>Formats: JPG, PNG (Max 5MB)</p>
+          </section>
+
+          {/* Basic Info */}
+          <section className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-lime-400 m-0 mb-4">Basic Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                name="companyName"
+                placeholder="Company Name *"
+                value={company.companyName || ''}
+                onChange={handleChange}
+                required
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="email"
+                name="email"
+                placeholder="Company Email *"
+                value={company.email || ''}
+                onChange={handleChange}
+                required
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="tel"
+                name="phone"
+                placeholder="Phone Number"
+                value={company.phone || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="url"
+                name="website"
+                placeholder="Website URL"
+                value={company.website || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Basic Info */}
-        <section>
-          <h2>Basic Information</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {/* Address */}
+          <section className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-lime-400 m-0 mb-4">Address</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                name="address.street"
+                placeholder="Street Address"
+                value={company.address?.street || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="text"
+                name="address.city"
+                placeholder="City"
+                value={company.address?.city || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="text"
+                name="address.state"
+                placeholder="State"
+                value={company.address?.state || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="text"
+                name="address.zipCode"
+                placeholder="ZIP Code"
+                value={company.address?.zipCode || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="text"
+                name="address.country"
+                placeholder="Country"
+                value={company.address?.country || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm md:col-span-2"
+              />
+            </div>
+          </section>
+
+          {/* Social Links */}
+          <section className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-lime-400 m-0 mb-4">Social Media Links</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="url"
+                name="socialLinks.facebook"
+                placeholder="Facebook URL"
+                value={company.socialLinks?.facebook || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="url"
+                name="socialLinks.twitter"
+                placeholder="Twitter URL"
+                value={company.socialLinks?.twitter || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="url"
+                name="socialLinks.linkedin"
+                placeholder="LinkedIn URL"
+                value={company.socialLinks?.linkedin || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="url"
+                name="socialLinks.instagram"
+                placeholder="Instagram URL"
+                value={company.socialLinks?.instagram || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+              />
+              <input
+                type="url"
+                name="socialLinks.youtube"
+                placeholder="YouTube URL"
+                value={company.socialLinks?.youtube || ''}
+                onChange={handleChange}
+                className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm md:col-span-2"
+              />
+            </div>
+          </section>
+
+          {/* Description */}
+          <section className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-lime-400 m-0 mb-4">Additional Information</h2>
+            <textarea
+              name="description"
+              placeholder="Company Description"
+              value={company.description || ''}
+              onChange={handleChange}
+              rows={4}
+              className="w-full bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm resize-vertical mb-4"
+            />
             <input
               type="text"
-              name="companyName"
-              placeholder="Company Name"
-              value={company.companyName || ''}
+              name="industry"
+              placeholder="Industry"
+              value={company.industry || ''}
               onChange={handleChange}
-              required
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              className="w-full bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
             />
-            <input
-              type="email"
-              name="email"
-              placeholder="Company Email"
-              value={company.email || ''}
-              onChange={handleChange}
-              required
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="tel"
-              name="phone"
-              placeholder="Phone Number"
-              value={company.phone || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="url"
-              name="website"
-              placeholder="Website URL"
-              value={company.website || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-          </div>
-        </section>
+          </section>
 
-        {/* Address */}
-        <section>
-          <h2>Address</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <input
-              type="text"
-              name="address.street"
-              placeholder="Street Address"
-              value={company.address?.street || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="text"
-              name="address.city"
-              placeholder="City"
-              value={company.address?.city || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="text"
-              name="address.state"
-              placeholder="State"
-              value={company.address?.state || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="text"
-              name="address.zipCode"
-              placeholder="ZIP Code"
-              value={company.address?.zipCode || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-          </div>
-        </section>
-
-        {/* Social Links */}
-        <section>
-          <h2>Social Media Links</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <input
-              type="url"
-              name="socialLinks.facebook"
-              placeholder="Facebook URL"
-              value={company.socialLinks?.facebook || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="url"
-              name="socialLinks.twitter"
-              placeholder="Twitter URL"
-              value={company.socialLinks?.twitter || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="url"
-              name="socialLinks.linkedin"
-              placeholder="LinkedIn URL"
-              value={company.socialLinks?.linkedin || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-            <input
-              type="url"
-              name="socialLinks.instagram"
-              placeholder="Instagram URL"
-              value={company.socialLinks?.instagram || ''}
-              onChange={handleChange}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-            />
-          </div>
-        </section>
-
-        {/* Description */}
-        <section>
-          <h2>Additional Information</h2>
-          <textarea
-            name="description"
-            placeholder="Company Description"
-            value={company.description || ''}
-            onChange={handleChange}
-            rows={4}
-            style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', width: '100%' }}
-          />
-          <input
-            type="text"
-            name="industry"
-            placeholder="Industry"
-            value={company.industry || ''}
-            onChange={handleChange}
-            style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', width: '100%', marginTop: '16px' }}
-          />
-        </section>
-
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: '12px 24px',
-            background: saving ? '#ccc' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            fontSize: '16px'
-          }}
-        >
-          {saving ? 'Saving...' : 'Save Company Information'}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-lime-500 hover:bg-lime-600 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-base"
+          >
+            <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Company Information'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

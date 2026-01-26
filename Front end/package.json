@@ -20,6 +20,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@tailwindcss/vite": "^4.1.14",
     "axios": "^1.10.0",
+    "lucide-react": "^0.563.0",
     "npx": "^10.2.2",
     "pdfjs-dist": "^5.4.149",
     "react": "^19.1.0",

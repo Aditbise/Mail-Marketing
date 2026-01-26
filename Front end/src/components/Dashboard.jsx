@@ -23,56 +23,59 @@ const CHART_BAR_MIN_HEIGHT = 20;
  * Used throughout the dashboard for consistent theming
  */
 const COLORS = {
-  bg: '#1a1a1a',           // Main background
-  cardBg: '#2a2a2a',       // Card backgrounds
-  border: '#444',          // Border color
+  bg: '#18181b',           // Main background (zinc-900)
+  cardBg: '#27272a',       // Card backgrounds (zinc-800)
+  border: '#3f3f46',       // Border color (zinc-700)
   text: '#ffffff',         // Primary text
-  textSecondary: '#b0b0b0',// Secondary text
-  textMuted: '#808080',    // Muted/dimmed text
-  accent: '#4299e1',       // Primary accent (blue)
-  success: '#38a169',      // Success color (green)
-  warning: '#ecc94b',      // Warning color (yellow)
-  danger: '#f56565'        // Danger color (red)
+  textSecondary: '#a1a1aa',// Secondary text (zinc-400)
+  textMuted: '#71717a',    // Muted/dimmed text (zinc-500)
+  accent: '#84cc16',       // Primary accent (lime-500)
+  success: '#a3e635',      // Success color (lime-400)
+  warning: '#a3e635',      // Warning color (lime-400)
+  danger: '#a3e635'        // Danger color (lime-400)
 };
 
 const STYLE = {
   container: { 
     backgroundColor: COLORS.bg,
-    className: 'px-3 sm:px-6 md:px-12 py-5 sm:py-7 md:py-10 min-h-screen w-full box-border overflow-x-hidden'
+    className: 'ml-0 h-screen w-screen bg-zinc-950 overflow-x-auto'
+  },
+  innerContainer: {
+    className: 'ml-64 h-screen overflow-y-auto flex flex-col gap-8 px-6 py-8'
   },
   card: { 
     backgroundColor: COLORS.cardBg,
     borderColor: COLORS.border,
-    className: 'rounded-lg p-4 sm:p-5 md:p-6 shadow-lg border'
+    className: 'rounded-lg p-6 sm:p-7 md:p-8 shadow-lg border'
   },
   heading1: { 
     color: COLORS.text,
-    className: 'text-2xl sm:text-3xl md:text-4xl font-bold mb-2'
+    className: 'text-3xl sm:text-4xl md:text-5xl font-bold mb-3'
   },
   heading2: { 
     color: COLORS.text,
-    className: 'text-lg sm:text-xl md:text-xl font-semibold mb-3 sm:mb-5'
+    className: 'text-xl sm:text-2xl md:text-2xl font-semibold mb-4 sm:mb-6'
   },
   heading3: { 
     color: COLORS.text,
-    className: 'text-base sm:text-lg mb-3 sm:mb-5'
+    className: 'text-lg sm:text-xl mb-4 sm:mb-6'
   },
   label: { 
     color: COLORS.textSecondary,
-    className: 'text-xs sm:text-sm mb-1 sm:mb-2 uppercase'
+    className: 'text-sm sm:text-base mb-2 sm:mb-3 uppercase'
   },
   largeText: { 
     color: COLORS.text,
-    className: 'text-2xl sm:text-3xl md:text-4xl font-bold m-0'
+    className: 'text-3xl sm:text-4xl md:text-5xl font-bold m-0'
   },
   smallText: { 
-    color: COLORS.success,
+    color: COLORS.accent,
     className: 'text-xs mt-1'
   },
   badge: { 
     className: 'px-2 py-1 rounded-full text-xs font-semibold',
-    backgroundColor: '#e6fffa',
-    color: '#234e52'
+    backgroundColor: COLORS.cardBg,
+    color: COLORS.accent
   }
 };
 
@@ -94,11 +97,11 @@ const ERROR_STYLES = {
     className: 'px-3 sm:px-6 md:px-12 py-5 sm:py-10 min-h-screen flex items-center justify-center'
   },
   content: { className: 'text-center' },
-  title: { color: COLORS.danger, className: 'text-2xl sm:text-3xl' },
+  title: { color: COLORS.accent, className: 'text-2xl sm:text-3xl' },
   message: { color: COLORS.textMuted, className: 'text-sm sm:text-base mt-2' },
   button: {
     backgroundColor: COLORS.accent,
-    color: 'white',
+    color: '#000000',
     className: 'mt-4 sm:mt-5 px-4 sm:px-5 py-2 rounded-lg cursor-pointer text-sm font-semibold border-none hover:opacity-90'
   }
 };
@@ -111,7 +114,7 @@ const ACTIVITY_ITEM_STYLES = {
   content: { className: 'flex-1 min-w-0' },
   description: { fontWeight: '600', color: COLORS.text, className: 'text-sm sm:text-base truncate' },
   timestamp: { fontSize: '11px', color: COLORS.textMuted, className: 'text-xs' },
-  badge: { backgroundColor: '#444', color: COLORS.text, className: 'px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0' }
+  badge: { backgroundColor: COLORS.cardBg, color: COLORS.accent, className: 'px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0' }
 };
 
 const CHART_BAR_STYLES = {
@@ -156,8 +159,8 @@ const ActivityItem = memo(({ activity, isLast }) => {
   return (
     <div className={ACTIVITY_ITEM_STYLES.container(isLast).className} style={{ borderBottomColor: ACTIVITY_ITEM_STYLES.container(isLast).borderBottomColor }}>
       <div className={ACTIVITY_ITEM_STYLES.content.className}>
-        <div style={{ color: ACTIVITY_ITEM_STYLES.description.color }} className="font-semibold">{activity.description}</div>
-        <div style={{ fontSize: ACTIVITY_ITEM_STYLES.timestamp.fontSize, color: ACTIVITY_ITEM_STYLES.timestamp.color }}>{activity.timestamp}</div>
+        <div style={{ color: ACTIVITY_ITEM_STYLES.description.color }} className="font-semibold text-base sm:text-lg">{activity.description}</div>
+        <div style={{ fontSize: ACTIVITY_ITEM_STYLES.timestamp.fontSize, color: ACTIVITY_ITEM_STYLES.timestamp.color }} className="text-xs sm:text-sm mt-1">{activity.timestamp}</div>
       </div>
       <div className={ACTIVITY_ITEM_STYLES.badge.className} style={{ backgroundColor: ACTIVITY_ITEM_STYLES.badge.backgroundColor, color: ACTIVITY_ITEM_STYLES.badge.color }}>REAL DATA</div>
     </div>
@@ -256,51 +259,59 @@ export default function Dashboard() {
 
   return (
     <div className={STYLE.container.className} style={{ backgroundColor: STYLE.container.backgroundColor }}>
-      <div className="mb-4 sm:mb-6 md:mb-8">
-        <h1 style={{ color: STYLE.heading1.color }} className={STYLE.heading1.className}>Real-Time Analytics Dashboard</h1>
-        <p className="text-xs sm:text-sm md:text-base mt-1 sm:mt-2" style={{ color: COLORS.textMuted }}>
-          Live data from your email marketing platform • Updated: {lastUpdated}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8 md:mb-10">
-        {statsData.map((stat, idx) => (
-          <StatCard key={idx} label={stat.label} value={stat.value} subtitle={stat.subtitle} />
-        ))}
-      </div>
-
-      <div className={`${STYLE.card.className} mb-6 sm:mb-8`} style={{ backgroundColor: STYLE.card.backgroundColor, borderColor: STYLE.card.borderColor }}>
-        <h3 style={{ color: STYLE.heading3.color }} className={STYLE.heading3.className}>Real Contact Growth (From Your Database)</h3>
-        <div className="flex items-end gap-2 sm:gap-3 h-40 sm:h-48 md:h-56 overflow-x-auto pb-2">
-          {analytics.contactGrowth.length > 0 ? (
-            analytics.contactGrowth.map((data, idx) => (
-              <ChartBar key={idx} data={data.count} maxCount={maxContactGrowth} month={data.month} />
-            ))
-          ) : (
-            <div className="w-full text-center p-3 sm:p-5" style={{ color: COLORS.textMuted }}>
-              No data available
-            </div>
-          )}
+      <div className={STYLE.innerContainer.className}>
+        <div className="mb-6 sm:mb-8 md:mb-12">
+          <h1 style={{ color: STYLE.heading1.color }} className={STYLE.heading1.className}>Real-Time Analytics Dashboard</h1>
+          <p className="text-sm sm:text-base md:text-lg mt-2 sm:mt-3" style={{ color: COLORS.textMuted }}>
+            Live data from your email marketing platform • Updated: {lastUpdated}
+          </p>
         </div>
-        <p className="text-xs text-center mt-2 sm:mt-3" style={{ color: COLORS.textMuted }}>
-          Based on actual contact creation dates in your database
-        </p>
-      </div>
 
-      <div className={STYLE.card.className} style={{ backgroundColor: STYLE.card.backgroundColor, borderColor: STYLE.card.borderColor }}>
-        <h3 style={{ color: STYLE.heading2.color }} className={STYLE.heading2.className}>Live Activity Feed</h3>
-        {analytics.recentActivity.length === 0 ? (
-          <div className="text-center p-6 sm:p-10" style={{ color: COLORS.textMuted }}>
-            <div className="text-3xl sm:text-5xl mb-2 sm:mb-4">No Activity</div>
-            <p className="text-sm sm:text-base">No recent activity - start by adding contacts or creating segments!</p>
-          </div>
-        ) : (
-          <div>
-            {analytics.recentActivity.map((activity, idx) => (
-              <ActivityItem key={idx} activity={activity} isLast={idx === analytics.recentActivity.length - 1} />
+        <div className="mb-8 sm:mb-10 md:mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
+            {statsData.map((stat, idx) => (
+              <StatCard key={idx} label={stat.label} value={stat.value} subtitle={stat.subtitle} />
             ))}
           </div>
-        )}
+        </div>
+
+        <div className="mb-8 sm:mb-10 md:mb-12">
+          <div className={`${STYLE.card.className}`} style={{ backgroundColor: STYLE.card.backgroundColor, borderColor: STYLE.card.borderColor }}>
+            <h3 style={{ color: STYLE.heading3.color }} className={STYLE.heading3.className}>Real Contact Growth (From Your Database)</h3>
+            <div className="flex items-end gap-3 sm:gap-4 h-48 sm:h-56 md:h-64 overflow-x-auto pb-3">
+            {analytics.contactGrowth.length > 0 ? (
+              analytics.contactGrowth.map((data, idx) => (
+                <ChartBar key={idx} data={data.count} maxCount={maxContactGrowth} month={data.month} />
+              ))
+            ) : (
+              <div className="w-full text-center p-4 sm:p-6" style={{ color: COLORS.textMuted }}>
+                No data available
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-center mt-3 sm:mt-4" style={{ color: COLORS.textMuted }}>
+            Based on actual contact creation dates in your database
+          </p>
+          </div>
+        </div>
+
+        <div>
+          <div className={STYLE.card.className} style={{ backgroundColor: STYLE.card.backgroundColor, borderColor: STYLE.card.borderColor }}>
+            <h3 style={{ color: STYLE.heading2.color }} className={STYLE.heading2.className}>Live Activity Feed</h3>
+            {analytics.recentActivity.length === 0 ? (
+              <div className="text-center p-8 sm:p-12" style={{ color: COLORS.textMuted }}>
+                <div className="text-4xl sm:text-6xl mb-3 sm:mb-5">No Activity</div>
+                <p className="text-base sm:text-lg">No recent activity - start by adding contacts or creating segments!</p>
+              </div>
+            ) : (
+              <div>
+                {analytics.recentActivity.map((activity, idx) => (
+                  <ActivityItem key={idx} activity={activity} isLast={idx === analytics.recentActivity.length - 1} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

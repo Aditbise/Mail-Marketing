@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Plus, Trash2, Edit, X, Search } from "lucide-react";
 
 export default function EmailLists() {
     const [form, setForm] = useState({
@@ -171,256 +172,117 @@ export default function EmailLists() {
     };
 
     return (
-        <div style={{ 
-            padding: '20px', 
-            maxWidth: '1400px', 
-            margin: '0 auto', 
-            height: '100vh', 
-            display: 'flex', 
-            flexDirection: 'column' 
-        }}>
-            <h2 style={{ marginBottom: '20px', color: 'white' }}>Email Lists</h2>
+        <div className="ml-0 h-screen w-screen bg-zinc-950 overflow-x-auto">
+            <div className="ml-64 h-screen overflow-y-auto flex flex-col gap-6 px-6 py-8">
+                {/* Header */}
+                <div>
+                    <h1 className="text-4xl font-bold text-white m-0 mb-1">Email Lists</h1>
+                    <p className="text-zinc-400 text-sm m-0">Manage and organize your email contacts</p>
+                </div>
             
             {/* Add Email Form */}
-            <div style={{ marginBottom: '20px', flexShrink: 0 }}>
-                <form style={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap', 
-                    gap: '10px', 
-                    alignItems: 'center',
-                    padding: '20px',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '8px',
-                    border: '1px solid #e0e0e0'
-                }} onSubmit={handleSubmit}>
+            <div className="bg-zinc-900 rounded-lg border border-zinc-800 p-6 shadow-xl flex-shrink-0">
+                <h3 className="text-lg font-bold text-lime-400 m-0 mb-4 flex items-center gap-2"><Plus className="w-5 h-5" /> Add New Contact</h3>
+                <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                     <input
-                        style={{
-                            border: '2px solid #ddd',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            minWidth: '200px',
-                            outline: 'none',
-                            backgroundColor: 'white',
-                            color: '#333',
-                            fontWeight: '500'
-                        }}
+                        className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
                         name="email"
-                        placeholder="Email"
+                        placeholder="Email *"
                         value={form.email}
                         onChange={handleChange}
                         required
-                        onFocus={(e) => {
-                            e.target.style.borderColor = '#4caf50';
-                            e.target.style.backgroundColor = '#f9fff9';
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = '#ddd';
-                            e.target.style.backgroundColor = 'white';
-                        }}
                     />
                     <input
-                        style={{
-                            border: '2px solid #ddd',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            minWidth: '150px',
-                            outline: 'none',
-                            backgroundColor: 'white',
-                            color: '#333',
-                            fontWeight: '500'
-                        }}
+                        className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
                         name="name"
-                        placeholder="Name"
+                        placeholder="Name *"
                         value={form.name}
                         onChange={handleChange}
                         required
-                        onFocus={(e) => {
-                            e.target.style.borderColor = '#4caf50';
-                            e.target.style.backgroundColor = '#f9fff9';
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = '#ddd';
-                            e.target.style.backgroundColor = 'white';
-                        }}
                     />
                     <input
-                        style={{
-                            border: '2px solid #ddd',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            minWidth: '150px',
-                            outline: 'none',
-                            backgroundColor: 'white',
-                            color: '#333',
-                            fontWeight: '500'
-                        }}
+                        className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
                         name="position"
                         placeholder="Position"
                         value={form.position}
                         onChange={handleChange}
-                        onFocus={(e) => {
-                            e.target.style.borderColor = '#4caf50';
-                            e.target.style.backgroundColor = '#f9fff9';
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = '#ddd';
-                            e.target.style.backgroundColor = 'white';
-                        }}
                     />
                     <input
-                        style={{
-                            border: '2px solid #ddd',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            minWidth: '150px',
-                            outline: 'none',
-                            backgroundColor: 'white',
-                            color: '#333',
-                            fontWeight: '500'
-                        }}
+                        className="bg-zinc-800 border border-zinc-600 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
                         name="company"
                         placeholder="Company"
                         value={form.company}
                         onChange={handleChange}
-                        onFocus={(e) => {
-                            e.target.style.borderColor = '#4caf50';
-                            e.target.style.backgroundColor = '#f9fff9';
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = '#ddd';
-                            e.target.style.backgroundColor = 'white';
-                        }}
                     />
-                    <button 
-                        style={{
-                            backgroundColor: '#4caf50',
-                            color: 'white',
-                            border: 'none',
-                            padding: '10px 20px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            opacity: loading ? 0.6 : 1
-                        }}
-                        type="submit"
-                        disabled={loading}
-                    >
-                        {loading ? 'Adding...' : 'Add Email'}
-                    </button>
-                    <button
-                        style={{
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            padding: '10px 20px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            cursor: selectedIds.length === 0 || loading ? 'not-allowed' : 'pointer',
-                            opacity: selectedIds.length === 0 || loading ? 0.6 : 1
-                        }}
-                        onClick={handleDeleteSelected}
-                        disabled={selectedIds.length === 0 || loading}
-                        type="button"
-                    >
-                        Delete Selected ({selectedIds.length})
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            className="flex-1 bg-lime-500 hover:bg-lime-600 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                            type="submit"
+                            disabled={loading}
+                        >
+                            <Plus className="w-4 h-4" /> {loading ? 'Adding...' : 'Add'}
+                        </button>
+                        <button
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                            onClick={handleDeleteSelected}
+                            disabled={selectedIds.length === 0 || loading}
+                            type="button"
+                            title="Delete selected emails"
+                        >
+                            <Trash2 className="w-4 h-4" /> {selectedIds.length}
+                        </button>
+                    </div>
+                </div>
                 </form>
             </div>
 
             {/* Email List Section */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center', 
-                    marginBottom: '15px',
-                    flexShrink: 0
-                }}>
-                    <h3 style={{ margin: 0 }}>
-                        Email List ({filteredEmails.length} 
-                        {searchQuery && ` of ${emailList.length}`})
+            <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 flex-shrink-0">
+                    <h3 className="text-xl font-bold text-white m-0">
+                        Email List ({filteredEmails.length}{searchQuery && ` of ${emailList.length}`})
                     </h3>
                     
                     {/* Search Bar */}
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search emails, names, positions, companies..."
-                            style={{
-                                padding: '8px 12px',
-                                border: '2px solid #ddd',
-                                borderRadius: '20px',
-                                fontSize: '14px',
-                                outline: 'none',
-                                width: '300px',
-                                cursor: 'text'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = '#2196f3'}
-                            onBlur={(e) => e.target.style.borderColor = '#ddd'}
-                        />
+                    <div className="flex gap-2 items-center w-full sm:w-auto">
+                        <div className="relative flex-1 sm:flex-none">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search emails, names..."
+                                className="w-full bg-zinc-800 border border-zinc-600 text-white px-10 py-2.5 rounded-lg focus:outline-none focus:border-lime-400 transition-colors text-sm"
+                            />
+                        </div>
                         {searchQuery && (
                             <button
                                 onClick={clearSearch}
-                                style={{
-                                    backgroundColor: '#f44336',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '50%',
-                                    width: '30px',
-                                    height: '30px',
-                                    cursor: 'pointer',
-                                    fontSize: '16px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-lg transition-colors"
                                 title="Clear search"
                             >
-                                ×
+                                <X className="w-4 h-4" />
                             </button>
                         )}
                     </div>
                 </div>
                 
                 {/* Scrollable Table Container */}
-                <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    border: '1px solid #838383ff',
-                    borderRadius: '8px',
-                    backgroundColor: 'white'  // Changed back to white for better visibility
-                }}>
+                <div className="flex-1 overflow-y-auto border border-zinc-700 rounded-lg bg-zinc-900 shadow-xl">
                     {loading && (
-                        <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                            <p>Loading...</p>
+                        <div className="text-center py-12 text-zinc-400">
+                            <p className="text-base">Loading...</p>
                         </div>
                     )}
                     
                     {/* No Results */}
                     {searchQuery && filteredEmails.length === 0 && !loading && (
-                        <div style={{
-                            textAlign: 'center',
-                            padding: '40px',
-                            color: '#666'
-                        }}>
-                            <p>No emails found matching "{searchQuery}"</p>
+                        <div className="text-center py-12 text-zinc-400">
+                            <p className="text-base">No emails found matching "{searchQuery}"</p>
                             <button
                                 onClick={clearSearch}
-                                style={{
-                                    backgroundColor: '#2196f3',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    padding: '8px 16px',
-                                    cursor: 'pointer',
-                                    marginTop: '10px'
-                                }}
+                                className="bg-lime-500 hover:bg-lime-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors mt-4"
                             >
                                 Clear Search
                             </button>
@@ -429,48 +291,32 @@ export default function EmailLists() {
                     
                     {/* Empty State */}
                     {!searchQuery && emailList.length === 0 && !loading && (
-                        <div style={{
-                            textAlign: 'center',
-                            padding: '60px 20px',
-                            color: '#666'
-                        }}>
-                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
-                            <h3 style={{ margin: '0 0 12px 0', color: '#333' }}>No emails in your list yet</h3>
-                            <p style={{ margin: 0, fontSize: '16px' }}>
-                                Add your first email contact using the form above!
-                            </p>
+                        <div className="text-center py-16 text-zinc-400">
+                            <div className="text-6xl mb-4">📧</div>
+                            <h3 className="text-2xl font-bold text-white mb-2 m-0">No contacts yet</h3>
+                            <p className="text-base m-0">Add your first contact using the form above!</p>
                         </div>
                     )}
                     
                     {/* Email Table */}
                     {filteredEmails.length > 0 && (
-                        <table style={{ 
-                            width: '100%', 
-                            borderCollapse: 'collapse',
-                            fontSize: '14px'
-                        }}>
-                            <thead style={{ 
-                                backgroundColor: '#f8f9fa',  // Light gray header for better contrast
-                                borderBottom: '2px solid #dee2e6',
-                                position: 'sticky',
-                                top: 0,
-                                zIndex: 10
-                            }}>
+                        <table className="w-full border-collapse text-sm">
+                            <thead className="bg-zinc-800 border-b border-zinc-700 sticky top-0 z-10">
                                 <tr>
-                                    <th style={{ padding: '12px 8px', textAlign: 'left', width: '50px' }}>
+                                    <th className="p-3 text-left w-12">
                                         <input
                                             type="checkbox"
                                             checked={selectedIds.length === filteredEmails.length && filteredEmails.length > 0}
                                             onChange={handleSelectAll}
-                                            style={{ cursor: 'pointer' }}
+                                            className="cursor-pointer accent-lime-500"
                                         />
                                     </th>
-                                    <th style={{ padding: '12px 8px', textAlign: 'left' }}>Name</th>
-                                    <th style={{ padding: '12px 8px', textAlign: 'left' }}>Email</th>
-                                    <th style={{ padding: '12px 8px', textAlign: 'left' }}>Position</th>
-                                    <th style={{ padding: '12px 8px', textAlign: 'left' }}>Company</th>
-                                    <th style={{ padding: '12px 8px', textAlign: 'left' }}>Date Added</th>
-                                    <th style={{ padding: '12px 8px', textAlign: 'center', width: '140px' }}>Actions</th>
+                                    <th className="p-3 text-left text-lime-400 font-bold">Name</th>
+                                    <th className="p-3 text-left text-lime-400 font-bold">Email</th>
+                                    <th className="p-3 text-left text-lime-400 font-bold">Position</th>
+                                    <th className="p-3 text-left text-lime-400 font-bold">Company</th>
+                                    <th className="p-3 text-left text-lime-400 font-bold">Date Added</th>
+                                    <th className="p-3 text-center text-lime-400 font-bold w-32">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -480,124 +326,74 @@ export default function EmailLists() {
                                     return (
                                         <tr 
                                             key={item._id}
-                                            style={{ 
-                                                borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: editId === item._id 
-                                                    ? '#fff3e0' 
-                                                    : hasEmptyFields 
-                                                        ? '#ffebee' 
-                                                        : index % 2 === 0 ? '#f8f9fa' : 'white'  // Light gray and white alternating
-                                            }}
+                                            className={`border-b border-zinc-700 ${editId === item._id ? 'bg-zinc-700' : hasEmptyFields ? 'bg-red-900/30' : index % 2 === 0 ? 'bg-zinc-800' : 'bg-zinc-900'}`}
                                         >
-                                            <td style={{ padding: '12px 8px' }}>
+                                            <td className="p-3">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedIds.includes(item._id)}
                                                     onChange={() => handleSelect(item._id)}
-                                                    style={{ cursor: 'pointer' }}
+                                                    className="cursor-pointer accent-lime-500"
                                                 />
                                             </td>
                                             {editId === item._id ? (
                                                 <>
-                                                    <td style={{ padding: '8px' }}>
+                                                    <td className="p-2">
                                                         <input
                                                             name="name"
                                                             value={editForm.name}
                                                             onChange={handleEditChange}
-                                                            style={{
-                                                                border: '1px solid #ddd',
-                                                                padding: '6px 8px',
-                                                                borderRadius: '4px',
-                                                                width: '100%',
-                                                                fontSize: '14px'
-                                                            }}
+                                                            className="w-full bg-zinc-700 border border-zinc-600 text-white px-3 py-1 rounded text-sm focus:outline-none focus:border-lime-400"
                                                         />
                                                     </td>
-                                                    <td style={{ padding: '8px' }}>
+                                                    <td className="p-2">
                                                         <input
                                                             name="email"
                                                             value={editForm.email}
                                                             onChange={handleEditChange}
-                                                            style={{
-                                                                border: '1px solid #ddd',
-                                                                padding: '6px 8px',
-                                                                borderRadius: '4px',
-                                                                width: '100%',
-                                                                fontSize: '14px'
-                                                            }}
+                                                            className="w-full bg-zinc-700 border border-zinc-600 text-white px-3 py-1 rounded text-sm focus:outline-none focus:border-lime-400"
                                                         />
                                                     </td>
-                                                    <td style={{ padding: '8px' }}>
+                                                    <td className="p-2">
                                                         <input
                                                             name="position"
                                                             value={editForm.position}
                                                             onChange={handleEditChange}
-                                                            style={{
-                                                                border: '1px solid #ddd',
-                                                                padding: '6px 8px',
-                                                                borderRadius: '4px',
-                                                                width: '100%',
-                                                                fontSize: '14px'
-                                                            }}
+                                                            className="w-full bg-zinc-700 border border-zinc-600 text-white px-3 py-1 rounded text-sm focus:outline-none focus:border-lime-400"
                                                         />
                                                     </td>
-                                                    <td style={{ padding: '8px' }}>
+                                                    <td className="p-2">
                                                         <input
                                                             name="company"
                                                             value={editForm.company}
                                                             onChange={handleEditChange}
-                                                            style={{
-                                                                border: '1px solid #ddd',
-                                                                padding: '6px 8px',
-                                                                borderRadius: '4px',
-                                                                width: '100%',
-                                                                fontSize: '14px'
-                                                            }}
+                                                            className="w-full bg-zinc-700 border border-zinc-600 text-white px-3 py-1 rounded text-sm focus:outline-none focus:border-lime-400"
                                                         />
                                                     </td>
-                                                    <td style={{ padding: '12px 8px', fontSize: '12px', color: '#666' }}>
+                                                    <td className="p-3 text-xs text-zinc-400">
                                                         {item.dateAdded ? new Date(item.dateAdded).toLocaleDateString() : 'Unknown'}
                                                     </td>
-                                                    <td style={{ padding: '8px', textAlign: 'center' }}>
-                                                        <button 
-                                                            style={{
-                                                                backgroundColor: '#4caf50',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                cursor: 'pointer',
-                                                                marginRight: '4px'
-                                                            }}
-                                                            onClick={saveEdit}
-                                                            disabled={loading}
-                                                        >
-                                                            Save
-                                                        </button>
-                                                        <button 
-                                                            style={{
-                                                                backgroundColor: '#6c757d',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                            onClick={cancelEdit}
-                                                        >
-                                                            Cancel
-                                                        </button>
+                                                    <td className="p-2 text-center">
+                                                        <div className="flex gap-1 justify-center">
+                                                            <button 
+                                                                className="bg-lime-500 hover:bg-lime-600 disabled:bg-zinc-600 text-white px-3 py-1 rounded text-xs font-semibold transition-colors"
+                                                                onClick={saveEdit}
+                                                                disabled={loading}
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button 
+                                                                className="bg-zinc-600 hover:bg-zinc-700 text-white px-3 py-1 rounded text-xs font-semibold transition-colors"
+                                                                onClick={cancelEdit}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <td style={{ 
-                                                        padding: '12px 8px',
-                                                        color: !item.name ? '#f44336' : '#333',
-                                                        fontStyle: !item.name ? 'italic' : 'normal'
-                                                    }}>
+                                                    <td className={`p-3 text-sm ${!item.name ? 'text-red-400 italic' : 'text-zinc-200'}`}>
                                                         {searchQuery && item.name ? (
                                                             <span dangerouslySetInnerHTML={{
                                                                 __html: highlightText(item.name, searchQuery)
@@ -606,11 +402,7 @@ export default function EmailLists() {
                                                             item.name || '⚠️ No name'
                                                         )}
                                                     </td>
-                                                    <td style={{ 
-                                                        padding: '12px 8px',
-                                                        color: !item.email ? '#f44336' : '#333',
-                                                        fontStyle: !item.email ? 'italic' : 'normal'
-                                                    }}>
+                                                    <td className={`p-3 text-sm ${!item.email ? 'text-red-400 italic' : 'text-zinc-200'}`}>
                                                         {searchQuery && item.email ? (
                                                             <span dangerouslySetInnerHTML={{
                                                                 __html: highlightText(item.email, searchQuery)
@@ -619,11 +411,7 @@ export default function EmailLists() {
                                                             item.email || '⚠️ No email'
                                                         )}
                                                     </td>
-                                                    <td style={{ 
-                                                        padding: '12px 8px',
-                                                        color: !item.position ? '#f44336' : '#333',
-                                                        fontStyle: !item.position ? 'italic' : 'normal'
-                                                    }}>
+                                                    <td className={`p-3 text-sm ${!item.position ? 'text-red-400 italic' : 'text-zinc-200'}`}>
                                                         {searchQuery && item.position ? (
                                                             <span dangerouslySetInnerHTML={{
                                                                 __html: highlightText(item.position, searchQuery)
@@ -632,11 +420,7 @@ export default function EmailLists() {
                                                             item.position || '⚠️ No position'
                                                         )}
                                                     </td>
-                                                    <td style={{ 
-                                                        padding: '12px 8px',
-                                                        color: !item.company ? '#f44336' : '#333',
-                                                        fontStyle: !item.company ? 'italic' : 'normal'
-                                                    }}>
+                                                    <td className={`p-3 text-sm ${!item.company ? 'text-red-400 italic' : 'text-zinc-200'}`}>
                                                         {searchQuery && item.company ? (
                                                             <span dangerouslySetInnerHTML={{
                                                                 __html: highlightText(item.company, searchQuery)
@@ -645,39 +429,24 @@ export default function EmailLists() {
                                                             item.company || '⚠️ No company'
                                                         )}
                                                     </td>
-                                                    <td style={{ padding: '12px 8px', fontSize: '12px', color: '#666' }}>
+                                                    <td className="p-3 text-xs text-zinc-400">
                                                         {item.dateAdded ? new Date(item.dateAdded).toLocaleDateString() : 'Unknown'}
                                                     </td>
-                                                    <td style={{ padding: '8px', textAlign: 'center' }}>
-                                                        <button
-                                                            style={{
-                                                                backgroundColor: hasEmptyFields ? '#ff9800' : '#2196f3',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                cursor: 'pointer',
-                                                                marginRight: '4px'
-                                                            }}
-                                                            onClick={() => startEdit(item)}
-                                                        >
-                                                            {hasEmptyFields ? 'Fix' : 'Edit'}
-                                                        </button>
-                                                        <button
-                                                            style={{
-                                                                backgroundColor: '#f44336',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                            onClick={() => handleDelete(item._id)}
-                                                        >
-                                                            Delete
-                                                        </button>
+                                                    <td className="p-2 text-center">
+                                                        <div className="flex gap-1 justify-center">
+                                                            <button
+                                                                className={`${hasEmptyFields ? 'bg-orange-500 hover:bg-orange-600' : 'bg-lime-500 hover:bg-lime-600'} text-white px-3 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1`}
+                                                                onClick={() => startEdit(item)}
+                                                            >
+                                                                <Edit className="w-3 h-3" /> {hasEmptyFields ? 'Fix' : 'Edit'}
+                                                            </button>
+                                                            <button
+                                                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1"
+                                                                onClick={() => handleDelete(item._id)}
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </>
                                             )}
@@ -689,6 +458,7 @@ export default function EmailLists() {
                     )}
                 </div>
             </div>
+        </div>
         </div>
     );
 }
