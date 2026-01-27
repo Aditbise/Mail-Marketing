@@ -220,45 +220,9 @@ main {
   gap: 10px;
   transition: width 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
-.sidebar-button-div {
-  flex:1;
-  justify-content: center;
-  align-items: center;
-}
-.sidebar-button {
-  empty-cells: show;
-}
-.sidebar-content {
-  flex:1;
-  width: 400px;
-}
-.sidebar-contnet-div {
-  display: flex;
-  flex-direction: column;
-  gap: 15px; 
-}
-.sidebar-contnet-div h2 {
-  color:white;
-  font-size:25px;
-  white-space: nowrap;
-}
-.sidebar-contnet-div li a {
-  white-space: nowrap;
-}
-.sidebar-content h3 {
-  font-size: 30px;
-}
-.sidebar-content ul {
-  list-style: none;
-  padding: 0;
-}
 
-.returndiv {
-  width: 78vw;
-  margin: auto;
-  border: 1px solid var(--border-color);
-  padding: 20px;
-}
+
+
 
 /* Flex Utilities */
 .selectandtypediv,
@@ -276,70 +240,9 @@ main {
   gap: 1rem;
 }
 
-.div1 {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  width: 100%;
-  margin: 0 auto;
-  border: 1px solid hsla(0, 0%, 50%, 0.8);
-  padding: 10px;
-}
 
-.rdiv,
-.ldiv {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 5px;
-  width: 300px;
-  border-radius: 2px;
-}
-
-.rdiv {
-  background-color: lightsalmon;
-}
-
-.ldiv {
-  background-color: lightblue;
-}
 
 /* Specific Components */
-.selectlang {
-  color: white;
-  font-size: 26px;
-  margin: 70px;
-  max-width: 200px;
-  margin-left: 218px;
-  margin-right: 10px;
-  align-content: center;
-  padding: 10px;
-  border-radius: 8px;
-}
-
-.innerdiv {
-  width: 100%;
-  max-width: 960px;
-  min-width: 200px;
-  align-items: center;
-}
-
-.imagecopy {
-  width: 30px;
-  margin-left: 0;
-  padding-top: 80px;
-  padding-left: 0;
-}
-
-.imagecopy:hover {
-  border-color: var(--primary-color);
-}
-
-.typehere,
-.translationhere {
-  align-content: center;
-  padding: 30px 0;
-}
 
 .logindv {
   position: relative;
@@ -458,29 +361,7 @@ main {
     padding: 15px;
   }
   
-  .templates-layout-wrapper {
-    flex-direction: column;
-  }
-  
-  .templates-list-sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #444;
-    padding-right: 0;
-    padding-bottom: 15px;
-    max-height: 200px;
-  }
-  
-  .templates-list-container {
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-  
-  .templates-list-item {
-    flex-shrink: 0;
-    min-width: 200px;
-  }
+
 }
 
 @media (max-width: 768px) {
@@ -490,21 +371,7 @@ main {
     gap: 15px;
   }
   
-  .templates-layout-wrapper {
-    padding: 10px;
-  }
-  
-  .templates-preview-card {
-    padding: 20px;
-  }
-  
-  .template-card-icon-large {
-    font-size: 48px;
-  }
-  
-  .template-card-title-large {
-    font-size: 20px;
-  }
+
 }
 .email-body-editor-display{
   flex: 1;

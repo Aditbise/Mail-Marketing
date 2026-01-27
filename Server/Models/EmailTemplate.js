@@ -4,8 +4,7 @@ const emailTemplateSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   subject: {
     type: String,
@@ -65,8 +64,7 @@ const emailTemplateSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   updatedAt: {
     type: Date,

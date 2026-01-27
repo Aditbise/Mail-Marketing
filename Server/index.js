@@ -1043,84 +1043,179 @@ app.post('/ai-generate-email', async (req, res) => {
             return res.status(400).json({ error: 'Prompt is required' });
         }
 
-        // Use Groq API (Free tier, no quota limits)
-        if (!process.env.GROQ_API_KEY) {
-            return res.status(500).json({ 
-                error: 'Groq API key not configured',
-                instruction: 'Add GROQ_API_KEY to .env file from https://console.groq.com'
-            });
-        }
-
-        const groq = new Groq({
-            apiKey: process.env.GROQ_API_KEY
-        });
-
-        // Create the email generation prompt
-        const fullPrompt = `You are an expert email marketing copywriter. Generate a professional email based on the following user request:
+        const emailPrompt = `You are an expert email marketing copywriter. Generate a professional email based on the following user request:
 
 ${prompt}
 
-Please generate ONLY the following in this exact format:
-1. A compelling email subject line (single line, no "Subject:" prefix)
-2. A blank line
-3. The email body in HTML format (start directly with HTML tags, no explanations)
+IMPORTANT - Return ONLY these TWO parts with NO other text, explanations, or labels:
 
-Make the email:
-- Engaging and professional
-- Properly formatted with HTML tags
-- Include an appropriate greeting and closing
-- Be concise but effective
+PART 1: A single compelling email subject line (no prefix, just the subject)
+PART 2: A complete professional email body in HTML format
 
-Do NOT include any explanations, markdown, or text outside the HTML. Start directly with the email subject, then blank line, then HTML.`;
+Format:
+[Subject line here]
 
-        // Call Groq API
-        const response = await groq.messages.create({
-            messages: [
-                {
-                    role: "user",
-                    content: fullPrompt
+<html><body>
+[HTML email body here - must include greeting, content, and professional closing]
+</body></html>
+
+Rules:
+- Do NOT add "Subject:" prefix
+- Do NOT add "Body:" prefix
+- Do NOT include markdown or code blocks
+- Do NOT explain or comment on the email
+- Start with subject line directly
+- Leave one blank line before HTML
+- HTML must be complete and properly formatted`;
+
+        let text = '';
+        let usedService = '';
+
+        // Try Groq API first (if configured and not placeholder)
+        if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'your_groq_api_key_here') {
+            try {
+                console.log('🔄 Attempting Groq API call...');
+                const groq = new Groq({
+                    apiKey: process.env.GROQ_API_KEY
+                });
+
+                const response = await groq.chat.completions.create({
+                    messages: [
+                        {
+                            role: "user",
+                            content: emailPrompt
+                        }
+                    ],
+                    model: "llama-3.1-8b-instant",
+                    max_tokens: 1024,
+                    temperature: 0.7
+                });
+
+                if (response && response.choices && response.choices[0]) {
+                    text = response.choices[0].message.content;
+                    usedService = 'Groq';
+                    console.log('✅ Groq API successfully generated email');
+                } else {
+                    console.warn('⚠️  Groq returned invalid response structure');
                 }
-            ],
-            model: "mixtral-8x7b-32768",
-            max_tokens: 1024
-        });
+            } catch (groqError) {
+                console.warn('⚠️  Groq API error:', {
+                    message: groqError.message,
+                    status: groqError.status,
+                    code: groqError.code
+                });
+            }
+        } else {
+            console.log('⚠️  Groq API key not configured, skipping Groq');
+        }
 
-        const text = response.content[0].type === 'text' ? response.content[0].text : '';
+        // Use Gemini API as fallback or primary
+        if (!text && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here') {
+            try {
+                console.log('🔄 Attempting Gemini API call...');
+                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+                const result = await model.generateContent({
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                {
+                                    text: emailPrompt
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                if (result && result.response) {
+                    text = result.response.text();
+                    usedService = 'Gemini';
+                    console.log('✅ Gemini API successfully generated email');
+                } else {
+                    console.warn('⚠️  Gemini returned invalid response structure');
+                }
+            } catch (geminiError) {
+                console.warn('⚠️  Gemini API error:', {
+                    message: geminiError.message,
+                    status: geminiError.status
+                });
+            }
+        } else if (!text) {
+            console.log('⚠️  Gemini API key not configured or already attempted');
+        }
+
+        if (!text) {
+            return res.status(500).json({ 
+                error: 'AI API not configured or failed',
+                instruction: 'Configure either GROQ_API_KEY or GEMINI_API_KEY in .env file with valid keys'
+            });
+        }
 
         // Parse the response to extract subject and content
-        const lines = text.split('\n');
+        // Remove any markdown code blocks if present
+        let cleanText = text.replace(/```html\n?/g, '').replace(/```\n?/g, '');
+        
+        const lines = cleanText.split('\n');
         let subject = '';
         let contentStart = -1;
 
-        // First non-empty line is the subject
+        // Find first non-empty line as subject
         for (let i = 0; i < lines.length; i++) {
-            if (lines[i].trim()) {
-                subject = lines[i].trim();
+            const trimmedLine = lines[i].trim();
+            // Skip lines that look like labels or instructions
+            if (trimmedLine && !trimmedLine.toLowerCase().includes('subject') && 
+                !trimmedLine.toLowerCase().includes('body') &&
+                !trimmedLine.toLowerCase().includes('html') &&
+                !trimmedLine.startsWith('Part') &&
+                trimmedLine.length < 200) { // Subject should be reasonably short
+                subject = trimmedLine;
                 contentStart = i + 1;
                 break;
             }
         }
 
-        // Skip blank lines after subject
+        // Skip blank lines and find HTML content
         while (contentStart < lines.length && !lines[contentStart].trim()) {
             contentStart++;
         }
 
-        // Rest is content
-        const content = lines.slice(contentStart).join('\n').trim();
+        // Find where HTML starts and extract everything after that
+        let content = '';
+        for (let i = contentStart; i < lines.length; i++) {
+            const line = lines[i];
+            // Include line if it contains HTML or is part of the body
+            if (line.includes('<') || content) {
+                content += (content ? '\n' : '') + line;
+            }
+        }
+
+        content = content.trim();
+
+        // Clean up any trailing text after </html>
+        const htmlEndIndex = content.lastIndexOf('</html>');
+        if (htmlEndIndex !== -1) {
+            content = content.substring(0, htmlEndIndex + 7);
+        }
 
         if (!subject || !content) {
+            console.error('Failed to parse email. Subject:', subject, 'Content length:', content.length);
             return res.status(400).json({ error: 'Failed to generate email content' });
         }
 
         res.json({
             subject: subject,
-            content: content
+            content: content,
+            service: usedService
         });
 
     } catch (error) {
         console.error('❌ AI Email Generation Error:', error);
-        res.status(500).json({ error: error.message || 'Failed to generate email with AI' });
+        res.status(500).json({ 
+            error: error.message || 'Failed to generate email with AI',
+            details: process.env.NODE_ENV === 'development' ? error.toString() : undefined
+        });
     }
 });
 

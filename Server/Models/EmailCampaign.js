@@ -6,8 +6,7 @@ const EmailCampaignSchema = new mongoose.Schema({
     required: [true, 'Campaign name is required'],
     trim: true,
     minlength: [1, 'Campaign name is required'],
-    maxlength: [100, 'Campaign name cannot exceed 100 characters'],
-    index: true
+    maxlength: [100, 'Campaign name cannot exceed 100 characters']
   },
   description: { 
     type: String, 
@@ -31,8 +30,7 @@ const EmailCampaignSchema = new mongoose.Schema({
   // Multi-segment targeting  
   targetSegments: [{ 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Segment',
-    index: true
+    ref: 'Segment'
   }],
   
   // Professional email settings
@@ -72,8 +70,7 @@ const EmailCampaignSchema = new mongoose.Schema({
       values: ['Draft', 'Ready to Send', 'Scheduled', 'Sending', 'Sent', 'Paused'],
       message: 'Status must be one of: Draft, Ready to Send, Scheduled, Sending, Sent, Paused'
     },
-    default: 'Draft',
-    index: true
+    default: 'Draft'
   },
   
   // Detailed recipient tracking
@@ -113,8 +110,7 @@ const EmailCampaignSchema = new mongoose.Schema({
     status: { 
       type: String, 
       enum: ['pending', 'sent', 'failed', 'bounced', 'opened', 'clicked', 'active'],
-      default: 'pending',
-      index: true
+      default: 'pending'
     },
     sentAt: {
       type: Date,
@@ -158,8 +154,7 @@ const EmailCampaignSchema = new mongoose.Schema({
   totalRecipients: { 
     type: Number, 
     default: 0, 
-    min: 0,
-    index: true 
+    min: 0
   },
   emailsSent: { 
     type: Number, 
@@ -179,23 +174,19 @@ const EmailCampaignSchema = new mongoose.Schema({
   
   scheduledAt: { 
     type: Date, 
-    default: null,
-    index: true
+    default: null
   },
   sentAt: { 
     type: Date, 
-    default: null,
-    index: true 
+    default: null
   },
   createdAt: { 
     type: Date, 
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   updatedAt: { 
     type: Date, 
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 }, { 
   timestamps: true // Auto-update createdAt/updatedAt

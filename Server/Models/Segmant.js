@@ -5,8 +5,7 @@ const SegmentSchema = new mongoose.Schema({
         type: String, 
         required: true, 
         unique: true,
-        trim: true,
-        index: true
+        trim: true
     },
     description: { 
         type: String,
@@ -27,8 +26,7 @@ const SegmentSchema = new mongoose.Schema({
     },
     createdAt: { 
         type: Date, 
-        default: Date.now,
-        index: true
+        default: Date.now
     },
     updatedAt: { 
         type: Date, 
@@ -37,7 +35,6 @@ const SegmentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Add indexes for frequently queried fields
-SegmentSchema.index({ name: 1 });
 SegmentSchema.index({ createdAt: -1 });
 
 const SegmentModel = mongoose.model('Segment', SegmentSchema);

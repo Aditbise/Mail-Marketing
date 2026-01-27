@@ -432,7 +432,39 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
                   <input type="text" name="subject" value={formData.subject} onChange={handleChange} placeholder="Email subject" className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-800 text-white focus:border-lime-400 focus:outline-none text-sm" required />
                 </div>
 
-                <div className="mt-3">
+                {/* AI Generation Section - Integrated with Email Body */}
+                <div className="mt-4 p-4 bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-lg border border-lime-500/30">
+                  <h4 className="m-0 mb-3 text-lime-300 text-sm font-bold flex items-center gap-2"><Sparkles className="w-4 h-4" /> Generate with AI</h4>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block mb-2 font-bold text-white text-xs">Describe your email:</label>
+                      <textarea
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="e.g., 'Write a friendly welcome email for new customers with a 20% discount offer'"
+                        className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-800 text-white focus:border-lime-400 focus:outline-none text-xs min-h-20 resize-vertical"
+                      />
+                    </div>
+
+                    {aiError && (
+                      <div className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs">
+                        ⚠️ {aiError}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={generateEmailContent}
+                      disabled={aiLoading}
+                      className={`w-full py-2 text-white border-none rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${aiLoading ? 'bg-lime-600 opacity-70 cursor-not-allowed' : 'bg-lime-500 hover:bg-lime-600 cursor-pointer'}`}
+                    >
+                      <Sparkles className="w-4 h-4" /> {aiLoading ? 'Generating...' : 'Generate Email Body & Subject'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4">
                   <label className="block mb-2 font-bold text-white text-sm">Email Body (HTML) *</label>
                   <textarea name="content" value={formData.content} onChange={handleChange} placeholder="Enter HTML content..." rows="6" className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-800 text-white focus:border-lime-400 focus:outline-none text-sm resize-vertical" required />
                   <p className="text-xs text-zinc-400 mt-1">💡 Supports HTML tags for formatting</p>
@@ -442,33 +474,6 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
                   <label className="block mb-2 font-bold text-white text-sm">Signature</label>
                   <textarea name="signature" value={formData.signature} onChange={handleChange} placeholder="Email signature (HTML supported)" rows="3" className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-800 text-white focus:border-lime-400 focus:outline-none text-sm resize-vertical" />
                 </div>
-              </div>
-
-              {/* AI Generation Section */}
-              <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 p-4 rounded-lg border border-zinc-700">
-                <h3 className="m-0 mb-3 text-lime-400 text-base font-bold flex items-center gap-2"><Sparkles className="w-5 h-5" /> AI Email Generator</h3>
-                
-                <textarea
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Describe what you want: e.g., 'Write a friendly welcome email with 20% discount'"
-                  className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-800 text-white focus:border-lime-400 focus:outline-none text-sm min-h-16 resize-vertical"
-                />
-
-                {aiError && (
-                  <div className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs mt-2">
-                    ⚠️ {aiError}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={generateEmailContent}
-                  disabled={aiLoading}
-                  className={`w-full py-2.5 text-white border-none rounded-lg font-bold text-sm transition-all mt-2 flex items-center justify-center gap-2 ${aiLoading ? 'bg-lime-600 opacity-70 cursor-not-allowed' : 'bg-lime-500 hover:bg-lime-600 cursor-pointer'}`}
-                >
-                  <Sparkles className="w-4 h-4" /> {aiLoading ? 'Generating...' : 'Generate Email'}
-                </button>
               </div>
 
               {/* Tags Section */}
@@ -700,6 +705,39 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
                   <label className="block mb-2 font-bold text-white text-sm">Email Subject *</label>
                   <input type="text" name="subject" value={formData.subject} onChange={handleChange} className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-700 text-white focus:border-lime-400 focus:outline-none transition-colors" required />
                 </div>
+
+                {/* AI Email Generator Section - Integrated with Email Body */}
+                <div className="p-4 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-lg border border-lime-500/30">
+                  <h4 className="m-0 mb-3 text-lime-300 text-sm font-bold flex items-center gap-2"><Sparkles className="w-4 h-4" /> Generate with AI</h4>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block mb-2 font-bold text-white text-xs">Describe your email:</label>
+                      <textarea
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="e.g., 'Write a friendly welcome email for new customers with a 20% discount offer'"
+                        className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-700 text-white focus:border-lime-400 focus:outline-none min-h-20 resize-vertical transition-colors text-xs"
+                      />
+                    </div>
+
+                    {aiError && (
+                      <div className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs">
+                        ⚠️ {aiError}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={generateEmailContent}
+                      disabled={aiLoading}
+                      className={`w-full py-2 text-white border-none rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${aiLoading ? 'bg-lime-600 opacity-70 cursor-not-allowed' : 'bg-lime-500 hover:bg-lime-600 cursor-pointer'}`}
+                    >
+                      <Sparkles className="w-4 h-4" /> {aiLoading ? 'Generating...' : 'Generate Email Body & Subject'}
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block mb-2 font-bold text-white text-sm">Email Body (HTML) *</label>
                   <textarea name="content" value={formData.content} onChange={handleChange} rows="6" className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-700 text-white focus:border-lime-400 focus:outline-none resize-vertical transition-colors text-xs" required />
@@ -708,35 +746,6 @@ function TemplateEditor({ template, onBack, onDelete, companyInfo }) {
                   <label className="block mb-2 font-bold text-white text-sm">Signature</label>
                   <textarea name="signature" value={formData.signature} onChange={handleChange} rows="3" className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-700 text-white focus:border-lime-400 focus:outline-none resize-vertical transition-colors text-xs" placeholder="Optional: Add your email signature" />
                 </div>
-              </div>
-            </div>
-
-            {/* AI Email Generator Section */}
-            <div>
-              <h3 className="text-lg font-bold text-lime-400 m-0 mb-4 flex items-center gap-2"><Sparkles className="w-5 h-5" /> AI Email Generator</h3>
-              <div className="space-y-4 pb-4 border-b border-zinc-700">
-                <div>
-                  <label className="block mb-2 font-bold text-white text-sm">Enter Prompt</label>
-                  <textarea
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="e.g., Write a friendly welcome email for new customers. Include a discount code and encourage them to explore products."
-                    className="w-full px-3 py-2 rounded-lg border border-zinc-600 bg-zinc-700 text-white focus:border-lime-400 focus:outline-none min-h-24 resize-vertical transition-colors text-xs"
-                  />
-                </div>
-                {aiError && (
-                  <div className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs">
-                    ⚠️ {aiError}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={generateEmailContent}
-                  disabled={aiLoading}
-                  className={`w-full py-2.5 text-white border-none rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${aiLoading ? 'bg-lime-600 opacity-70 cursor-not-allowed' : 'bg-lime-500 hover:bg-lime-600 cursor-pointer'}`}
-                >
-                  <Sparkles className="w-4 h-4" /> {aiLoading ? 'Generating...' : 'Generate Email'}
-                </button>
               </div>
             </div>
 

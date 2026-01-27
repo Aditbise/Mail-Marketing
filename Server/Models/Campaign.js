@@ -37,8 +37,7 @@ const campaignSchema = new mongoose.Schema({
   status: { 
     type: String, 
     enum: ['Draft', 'Ready to Send', 'Scheduled', 'Sent'], 
-    default: 'Draft',
-    index: true
+    default: 'Draft'
   },
   sentCount: { type: Number, default: 0 },
   deliveredCount: { type: Number, default: 0 },
@@ -54,8 +53,7 @@ const campaignSchema = new mongoose.Schema({
         return value > new Date();
       },
       message: 'Scheduled time must be in the future'
-    },
-    index: true // Index for faster queries on scheduled campaigns
+    }
   },
   scheduleMode: {
     type: String,
@@ -65,8 +63,7 @@ const campaignSchema = new mongoose.Schema({
   // ========== TIMESTAMP FIELDS ==========
   createdAt: { 
     type: Date, 
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   updatedAt: { 
     type: Date, 

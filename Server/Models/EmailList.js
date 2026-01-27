@@ -6,8 +6,7 @@ const EmailListSchema = new mongoose.Schema({
         required: true, 
         unique: true,
         lowercase: true,
-        trim: true,
-        index: true
+        trim: true
     },
     name: { 
         type: String, 
@@ -20,8 +19,7 @@ const EmailListSchema = new mongoose.Schema({
     status: { 
         type: String, 
         enum: ['active', 'inactive', 'unsubscribed', 'bounced'],
-        default: 'active',
-        index: true
+        default: 'active'
     },
     tags: [String],
     emailVerified: { 
@@ -34,8 +32,7 @@ const EmailListSchema = new mongoose.Schema({
     bounceReason: { type: String },
     dateAdded: { 
         type: Date, 
-        default: Date.now,
-        index: true
+        default: Date.now
     },
     updatedAt: { 
         type: Date, 
@@ -44,7 +41,6 @@ const EmailListSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Add indexes for frequently queried fields
-EmailListSchema.index({ email: 1 });
 EmailListSchema.index({ status: 1 });
 EmailListSchema.index({ tags: 1 });
 EmailListSchema.index({ dateAdded: -1 });
