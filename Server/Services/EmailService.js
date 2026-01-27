@@ -155,7 +155,7 @@ class EmailService {
           to: recipient.email,
           subject: emailBody.subject || 'Newsletter',
           html: wrappedContent,
-          text: this.stripHtml(personalizedContent),
+          text: this.stripHtml(wrappedContent),
           headers: {
             'List-Unsubscribe': `<mailto:${campaign.companyInfo?.email || 'noreply@localhost'}>`
           }
@@ -263,6 +263,28 @@ class EmailService {
   }
 
   wrapInTemplate(emailBody, companyInfo, subject) {
+    // Convert plain text with newlines to HTML with proper formatting
+    let htmlBody = emailBody;
+    if (typeof emailBody === 'string') {
+      // Check if this is plain text (no HTML tags) or already HTML
+      const hasHtmlTags = /<[^>]*>/.test(emailBody);
+      
+      if (!hasHtmlTags) {
+        // This is plain text, convert it to HTML with proper line breaks
+        htmlBody = emailBody
+          .split('\n\n')
+          .map(para => {
+            // Escape HTML special characters first
+            const escaped = para.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // Then convert newlines to <br> tags
+            const withBreaks = escaped.replace(/\n/g, '<br/>');
+            return `<p style="margin: 16px 0; line-height: 1.6; font-size: 16px; color: #333;">${withBreaks}</p>`;
+          })
+          .join('');
+      }
+      // If it already has HTML tags, use it as-is
+    }
+    
     // Use company info if available, otherwise use placeholders
     const company = companyInfo || {};
     
@@ -318,7 +340,7 @@ class EmailService {
 
     // Wrap in template and replace all placeholders
     let wrappedHtml = EMAIL_TEMPLATE
-      .replace(/\{\{emailBody\}\}/g, emailBody || '')
+      .replace(/\{\{emailBody\}\}/g, htmlBody || '')
       .replace(/\{\{subject\}\}/g, (subject || 'Newsletter').toString().trim())
       .replace(/\{\{companyLogo\}\}/g, logoHtml || '')
       .replace(/\{\{companyName\}\}/g, companyName || '[Company Name]')
@@ -329,7 +351,21 @@ class EmailService {
   }
 
   stripHtml(html) {
-    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    // First, convert escaped HTML entities back to characters
+    let text = html.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    // Convert <br> and <br/> and <br /> tags to newlines
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    // Convert </p> tags to double newlines for paragraph breaks
+    text = text.replace(/<\/p>/gi, '\n\n');
+    // Remove <p> opening tags with any attributes
+    text = text.replace(/<p[^>]*>/gi, '');
+    // Remove all remaining HTML tags
+    text = text.replace(/<[^>]*>/g, '');
+    // Clean up excessive whitespace but preserve intentional line breaks
+    text = text.replace(/[ \t]+/g, ' ').trim();
+    // Remove excessive blank lines (more than 2 consecutive newlines)
+    text = text.replace(/\n\n\n+/g, '\n\n');
+    return text;
   }
 
   async sendTestEmail(toEmail, subject = 'Test Email') {

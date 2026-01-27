@@ -299,10 +299,10 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
     preview: '',
     layout: 'modern',
     subject: '',
-    fromName: '',
-    fromEmail: '',
+    fromName: companyInfo?.companyName || '',
+    fromEmail: companyInfo?.email || '',
     replyTo: '',
-    content: '<h2>Welcome to our service!</h2><p>Click the button below to get started.</p>',
+    content: '',
     signature: 'Best regards,<br><strong>Your Company Team</strong>',
     category: 'promotional',
     tags: ''
@@ -519,7 +519,11 @@ function CreateTemplateModal({ onClose, onCreate, companyInfo }) {
               <div className="px-6 py-5 flex-1 overflow-y-auto font-sans">
                 <div 
                   className="text-zinc-900 text-sm leading-relaxed prose prose-sm max-w-none" 
-                  dangerouslySetInnerHTML={{ __html: formData.content || '<p style="color: #999; text-align: center;">Email content will appear here</p>' }} 
+                  dangerouslySetInnerHTML={{ __html: formData.content ? formData.content
+                    .split('\n\n')
+                    .map(para => `<p style="margin-bottom: 16px; white-space: pre-wrap; word-wrap: break-word;">${para.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`)
+                    .join('')
+                    : '<p style="color: #999; text-align: center;">Email content will appear here</p>' }} 
                 />
               </div>
               

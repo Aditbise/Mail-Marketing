@@ -1050,23 +1050,22 @@ ${prompt}
 IMPORTANT - Return ONLY these TWO parts with NO other text, explanations, or labels:
 
 PART 1: A single compelling email subject line (no prefix, just the subject)
-PART 2: A complete professional email body in HTML format
+PART 2: A complete professional email body in plain text format (NO HTML tags, just readable text with line breaks)
 
 Format:
 [Subject line here]
 
-<html><body>
-[HTML email body here - must include greeting, content, and professional closing]
-</body></html>
+[Plain text email body here - include greeting, content, and professional closing]
 
 Rules:
 - Do NOT add "Subject:" prefix
 - Do NOT add "Body:" prefix
-- Do NOT include markdown or code blocks
-- Do NOT explain or comment on the email
+- Do NOT include HTML tags, markdown, or code blocks
+- DO NOT explain or comment on the email
 - Start with subject line directly
-- Leave one blank line before HTML
-- HTML must be complete and properly formatted`;
+- Leave one blank line before email body
+- Use line breaks to separate paragraphs
+- Keep it professional and easy to read`;
 
         let text = '';
         let usedService = '';
@@ -1155,7 +1154,7 @@ Rules:
 
         // Parse the response to extract subject and content
         // Remove any markdown code blocks if present
-        let cleanText = text.replace(/```html\n?/g, '').replace(/```\n?/g, '');
+        let cleanText = text.replace(/```text\n?/g, '').replace(/```\n?/g, '');
         
         const lines = cleanText.split('\n');
         let subject = '';
@@ -1176,29 +1175,13 @@ Rules:
             }
         }
 
-        // Skip blank lines and find HTML content
+        // Skip blank lines and find content start
         while (contentStart < lines.length && !lines[contentStart].trim()) {
             contentStart++;
         }
 
-        // Find where HTML starts and extract everything after that
-        let content = '';
-        for (let i = contentStart; i < lines.length; i++) {
-            const line = lines[i];
-            // Include line if it contains HTML or is part of the body
-            if (line.includes('<') || content) {
-                content += (content ? '\n' : '') + line;
-            }
-        }
-
-        content = content.trim();
-
-        // Clean up any trailing text after </html>
-        const htmlEndIndex = content.lastIndexOf('</html>');
-        if (htmlEndIndex !== -1) {
-            content = content.substring(0, htmlEndIndex + 7);
-        }
-
+        // Get remaining lines as content
+        const content = lines.slice(contentStart).join('\n').trim();
         if (!subject || !content) {
             console.error('Failed to parse email. Subject:', subject, 'Content length:', content.length);
             return res.status(400).json({ error: 'Failed to generate email content' });
