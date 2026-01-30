@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const mongoose = require('mongoose');
 
 // HTML Email Template
 const EMAIL_TEMPLATE = `<!DOCTYPE html>
@@ -82,7 +84,43 @@ class EmailService {
     console.log(`   📬 Mailhog Web UI: http://localhost:8025`);
   }
 
-  async sendCampaignEmails(campaign) {
+  // Generate unique tracking ID
+  generateTrackingId() {
+    return crypto.randomBytes(16).toString('hex');
+  }
+
+  // Inject tracking pixel into email
+  injectTrackingPixel(html, trackingId, baseUrl) {
+    const pixelUrl = `${baseUrl}/tracking/open/${trackingId}`;
+    const pixel = `<img src="${pixelUrl}" alt="" width="1" height="1" style="display:none;" />`;
+    
+    // Insert pixel before closing body tag
+    if (html.includes('</body>')) {
+      return html.replace('</body>', pixel + '</body>');
+    }
+    return html + pixel;
+  }
+
+  // Convert regular links to tracked links
+  injectClickTracking(html, trackingId, baseUrl) {
+    if (!html) return html;
+    
+    // Find all href attributes and wrap them with tracking
+    return html.replace(/href=["']([^"']+)["']/g, (match, url) => {
+      // Skip mailto, tel, and anchor links
+      if (url.startsWith('mailto:') || url.startsWith('tel:') || url.startsWith('#')) {
+        return match;
+      }
+      
+      const trackingUrl = `${baseUrl}/tracking/click/${trackingId}?url=${encodeURIComponent(url)}`;
+      return `href="${trackingUrl}"`;
+    });
+  }
+
+  async sendCampaignEmails(campaign, baseUrl = 'http://localhost:3001') {
+    // Import EmailTracking model here to avoid circular dependency
+    const EmailTracking = mongoose.model('EmailTracking');
+    
     console.log(`🚀 Starting campaign: ${campaign.name}`);
     console.log(`📧 Sending to ${campaign.recipients.length} recipients via Local SMTP (Mailhog)`);
     
@@ -136,6 +174,9 @@ class EmailService {
       try {
         console.log(`\n⏱️  [${emailCount}/${totalEmails}] Processing email...`);
         
+        // Generate unique tracking ID for this recipient
+        const trackingId = this.generateTrackingId();
+        
         const personalizedContent = this.personalizeEmail(
           emailBody.content, 
           recipient, 
@@ -143,11 +184,15 @@ class EmailService {
         );
 
         // Wrap in professional HTML template
-        const wrappedContent = this.wrapInTemplate(
+        let wrappedContent = this.wrapInTemplate(
           personalizedContent,
           campaign.companyInfo,
           emailBody.subject
         );
+        
+        // Inject tracking pixel and click tracking
+        wrappedContent = this.injectTrackingPixel(wrappedContent, trackingId, baseUrl);
+        wrappedContent = this.injectClickTracking(wrappedContent, trackingId, baseUrl);
         
         // Nodemailer email payload
         const mailOptions = {
@@ -157,7 +202,8 @@ class EmailService {
           html: wrappedContent,
           text: this.stripHtml(wrappedContent),
           headers: {
-            'List-Unsubscribe': `<mailto:${campaign.companyInfo?.email || 'noreply@localhost'}>`
+            'List-Unsubscribe': `<mailto:${campaign.companyInfo?.email || 'noreply@localhost'}>`,
+            'X-Tracking-Id': trackingId
           }
         };
 
@@ -165,8 +211,29 @@ class EmailService {
         console.log(`   To: ${mailOptions.to}`);
         console.log(`   Subject: ${mailOptions.subject}`);
         console.log(`   Body: ${emailBody.name || 'Untitled'}`);
+        console.log(`   Tracking ID: ${trackingId}`);
         
         const info = await this.transporter.sendMail(mailOptions);
+        
+        // Create tracking record
+        try {
+          const trackingRecord = new EmailTracking({
+            campaignId: campaign._id || new mongoose.Types.ObjectId(),
+            recipientEmail: recipient.email,
+            trackingId: trackingId,
+            events: [{
+              type: 'sent',
+              timestamp: new Date(),
+              userAgent: 'Email Service',
+              ipAddress: 'localhost'
+            }]
+          });
+          
+          await trackingRecord.save();
+          console.log(`📊 Tracking record created for ${recipient.email}`);
+        } catch (trackingError) {
+          console.warn(`⚠️  Failed to create tracking record: ${trackingError.message}`);
+        }
         
         console.log(`✅ Email sent successfully!`);
         console.log(`   Message ID: ${info.messageId}`);
@@ -177,6 +244,7 @@ class EmailService {
           bodyName: emailBody.name,
           success: true,
           messageId: info.messageId,
+          trackingId: trackingId,
           timestamp: new Date()
         });
         

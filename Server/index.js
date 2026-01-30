@@ -1823,3 +1823,280 @@ app.post('/seed-email-bodies', async (req, res) => {
         res.status(500).json({ message: 'Error seeding email bodies', error: error.message });
     }
 });
+
+// ========== EMAIL TRACKING ROUTES ==========
+
+// Record email open (tracking pixel)
+app.get('/tracking/open/:trackingId', async (req, res) => {
+    try {
+        const { trackingId } = req.params;
+        
+        // Find the tracking record
+        const tracking = await EmailTracking.findOne({ trackingId });
+        
+        if (!tracking) {
+            // Create a new tracking record if it doesn't exist
+            console.log(`📧 Tracking pixel loaded for new recipient: ${trackingId}`);
+        } else {
+            // Record open event
+            const openEvent = {
+                type: 'opened',
+                timestamp: new Date(),
+                userAgent: req.headers['user-agent'] || 'Unknown',
+                ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
+            };
+            
+            tracking.events.push(openEvent);
+            tracking.totalOpens = (tracking.totalOpens || 0) + 1;
+            tracking.firstOpened = tracking.firstOpened || new Date();
+            tracking.lastOpened = new Date();
+            
+            await tracking.save();
+            console.log(`✅ Email opened tracked for: ${tracking.recipientEmail} (Open #${tracking.totalOpens})`);
+        }
+        
+        // Return a 1x1 transparent pixel
+        const pixel = Buffer.from([
+            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00,
+            0x01, 0x00, 0x80, 0x00, 0x00, 0xFF, 0xFF, 0xFF,
+            0x00, 0x00, 0x00, 0x21, 0xF9, 0x04, 0x01, 0x00,
+            0x00, 0x00, 0x00, 0x2C, 0x00, 0x00, 0x00, 0x00,
+            0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+            0x01, 0x00, 0x3B
+        ]);
+        
+        res.set('Content-Type', 'image/gif');
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.send(pixel);
+    } catch (error) {
+        console.error('❌ Tracking pixel error:', error);
+        res.status(500).json({ success: false, message: 'Tracking error' });
+    }
+});
+
+// Record link click
+app.get('/tracking/click/:trackingId', async (req, res) => {
+    try {
+        const { trackingId } = req.params;
+        const { url } = req.query;
+        
+        if (!url) {
+            return res.status(400).json({ success: false, message: 'URL required' });
+        }
+        
+        const tracking = await EmailTracking.findOne({ trackingId });
+        
+        if (tracking) {
+            const clickEvent = {
+                type: 'clicked',
+                timestamp: new Date(),
+                userAgent: req.headers['user-agent'] || 'Unknown',
+                ipAddress: req.ip || req.connection.remoteAddress || 'Unknown',
+                clickedUrl: url
+            };
+            
+            tracking.events.push(clickEvent);
+            tracking.totalClicks = (tracking.totalClicks || 0) + 1;
+            
+            await tracking.save();
+            console.log(`✅ Link clicked tracked for: ${tracking.recipientEmail} - URL: ${url}`);
+        }
+        
+        // Redirect to the actual URL
+        res.redirect(url);
+    } catch (error) {
+        console.error('❌ Click tracking error:', error);
+        res.redirect(req.query.url || '/');
+    }
+});
+
+// Get campaign tracking analytics
+app.get('/tracking/campaign/:campaignId', async (req, res) => {
+    try {
+        const { campaignId } = req.params;
+        
+        const trackingData = await EmailTracking.find({ campaignId })
+            .select('recipientEmail totalOpens totalClicks events');
+        
+        if (trackingData.length === 0) {
+            return res.json({
+                success: true,
+                campaignId,
+                summary: {
+                    totalRecipients: 0,
+                    totalSent: 0,
+                    totalOpens: 0,
+                    totalClicks: 0,
+                    openRate: 0,
+                    clickRate: 0,
+                    uniqueOpeners: 0,
+                    uniqueClickers: 0
+                },
+                recipientTracking: []
+            });
+        }
+        
+        // Calculate summary
+        const totalRecipients = trackingData.length;
+        const recipientsWithOpens = trackingData.filter(t => t.totalOpens > 0).length;
+        const recipientsWithClicks = trackingData.filter(t => t.totalClicks > 0).length;
+        const totalOpens = trackingData.reduce((sum, t) => sum + (t.totalOpens || 0), 0);
+        const totalClicks = trackingData.reduce((sum, t) => sum + (t.totalClicks || 0), 0);
+        
+        res.json({
+            success: true,
+            campaignId,
+            summary: {
+                totalRecipients,
+                totalSent: totalRecipients,
+                totalOpens,
+                totalClicks,
+                openRate: totalRecipients > 0 ? ((recipientsWithOpens / totalRecipients) * 100).toFixed(2) : 0,
+                clickRate: totalRecipients > 0 ? ((recipientsWithClicks / totalRecipients) * 100).toFixed(2) : 0,
+                uniqueOpeners: recipientsWithOpens,
+                uniqueClickers: recipientsWithClicks,
+                avgOpensPerRecipient: totalRecipients > 0 ? (totalOpens / totalRecipients).toFixed(2) : 0,
+                avgClicksPerRecipient: totalRecipients > 0 ? (totalClicks / totalRecipients).toFixed(2) : 0
+            },
+            recipientTracking: trackingData.map(t => ({
+                email: t.recipientEmail,
+                opens: t.totalOpens,
+                clicks: t.totalClicks,
+                firstOpened: t.firstOpened,
+                lastOpened: t.lastOpened,
+                lastEventType: t.events.length > 0 ? t.events[t.events.length - 1].type : 'no-event'
+            }))
+        });
+    } catch (error) {
+        console.error('❌ Campaign tracking error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching campaign tracking', error: error.message });
+    }
+});
+
+// Get all campaign tracking summaries
+app.get('/tracking/campaigns-summary', async (req, res) => {
+    try {
+        const campaigns = await EmailCampaign.find()
+            .select('_id name status sentAt totalRecipients')
+            .sort({ sentAt: -1 });
+        
+        const summaries = await Promise.all(campaigns.map(async (campaign) => {
+            const trackingData = await EmailTracking.find({ campaignId: campaign._id });
+            
+            const totalOpens = trackingData.reduce((sum, t) => sum + (t.totalOpens || 0), 0);
+            const totalClicks = trackingData.reduce((sum, t) => sum + (t.totalClicks || 0), 0);
+            const uniqueOpeners = trackingData.filter(t => t.totalOpens > 0).length;
+            const uniqueClickers = trackingData.filter(t => t.totalClicks > 0).length;
+            
+            return {
+                campaignId: campaign._id,
+                campaignName: campaign.name,
+                status: campaign.status,
+                totalRecipients: campaign.totalRecipients || trackingData.length,
+                totalOpens,
+                totalClicks,
+                uniqueOpeners,
+                uniqueClickers,
+                openRate: campaign.totalRecipients > 0 ? ((uniqueOpeners / campaign.totalRecipients) * 100).toFixed(2) : 0,
+                clickRate: campaign.totalRecipients > 0 ? ((uniqueClickers / campaign.totalRecipients) * 100).toFixed(2) : 0,
+                sentAt: campaign.sentAt
+            };
+        }));
+        
+        res.json({
+            success: true,
+            campaigns: summaries.sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
+        });
+    } catch (error) {
+        console.error('❌ Campaigns summary error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching campaigns summary', error: error.message });
+    }
+});
+
+// Get recipient tracking details
+app.get('/tracking/recipient/:trackingId', async (req, res) => {
+    try {
+        const { trackingId } = req.params;
+        
+        const tracking = await EmailTracking.findOne({ trackingId })
+            .populate('campaignId', 'name subject');
+        
+        if (!tracking) {
+            return res.status(404).json({ success: false, message: 'Tracking record not found' });
+        }
+        
+        res.json({
+            success: true,
+            tracking: {
+                recipientEmail: tracking.recipientEmail,
+                campaign: tracking.campaignId,
+                totalOpens: tracking.totalOpens,
+                totalClicks: tracking.totalClicks,
+                firstOpened: tracking.firstOpened,
+                lastOpened: tracking.lastOpened,
+                events: tracking.events.map(e => ({
+                    type: e.type,
+                    timestamp: e.timestamp,
+                    url: e.clickedUrl,
+                    userAgent: e.userAgent,
+                    ipAddress: e.ipAddress
+                }))
+            }
+        });
+    } catch (error) {
+        console.error('❌ Recipient tracking error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching recipient tracking', error: error.message });
+    }
+});
+
+// Get top clicked links
+app.get('/tracking/top-links/:campaignId', async (req, res) => {
+    try {
+        const { campaignId } = req.params;
+        
+        const trackingData = await EmailTracking.find({ campaignId });
+        
+        const linkStats = {};
+        trackingData.forEach(tracking => {
+            tracking.events.forEach(event => {
+                if (event.type === 'clicked' && event.clickedUrl) {
+                    linkStats[event.clickedUrl] = (linkStats[event.clickedUrl] || 0) + 1;
+                }
+            });
+        });
+        
+        const topLinks = Object.entries(linkStats)
+            .map(([url, clicks]) => ({ url, clicks }))
+            .sort((a, b) => b.clicks - a.clicks)
+            .slice(0, 10);
+        
+        res.json({
+            success: true,
+            campaignId,
+            topLinks
+        });
+    } catch (error) {
+        console.error('❌ Top links error:', error);
+        res.status(500).json({ success: false, message: 'Error fetching top links', error: error.message });
+    }
+});
+
+// Delete tracking data for a campaign
+app.delete('/tracking/campaign/:campaignId', async (req, res) => {
+    try {
+        const { campaignId } = req.params;
+        
+        const result = await EmailTracking.deleteMany({ campaignId });
+        
+        res.json({
+            success: true,
+            message: 'Campaign tracking data deleted',
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('❌ Delete tracking error:', error);
+        res.status(500).json({ success: false, message: 'Error deleting tracking data', error: error.message });
+    }
+});
+
+// ========== END EMAIL TRACKING ROUTES ==========
