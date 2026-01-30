@@ -1,4 +1,4 @@
-import { Users, Target, Mail, Zap, BarChart3, Clock, Lock, Bolt, Check } from 'lucide-react';
+import { Users, Target, Mail, Zap, BarChart3, Clock, Lock, Bolt, Check, Eye, TrendingUp, Activity, Sparkles } from 'lucide-react';
 
 export default function Features() {
   const features = [
@@ -48,6 +48,36 @@ export default function Features() {
       icon: Bolt,
       title: 'Real-time Processing',
       description: 'Instant campaign deployment with background job processing',
+      status: 'Active'
+    },
+    {
+      icon: Eye,
+      title: 'Email Tracking & Analytics',
+      description: 'Pixel-based open tracking and click-through monitoring with detailed metrics',
+      status: 'Active'
+    },
+    {
+      icon: BarChart3,
+      title: 'Campaign Performance Dashboard',
+      description: 'Comprehensive analytics dashboard with campaign stats, engagement rates, and top links',
+      status: 'Active'
+    },
+    {
+      icon: Activity,
+      title: 'Recipient Engagement Viewer',
+      description: 'Track individual recipient behavior with engagement levels and interaction history',
+      status: 'Active'
+    },
+    {
+      icon: TrendingUp,
+      title: 'Real-Time Dashboard',
+      description: 'Live analytics dashboard showing contact growth, segments, campaigns, and delivery metrics',
+      status: 'Active'
+    },
+    {
+      icon: Sparkles,
+      title: 'AI Email Composition',
+      description: 'Intelligent email content generation powered by AI for faster campaign creation',
       status: 'Active'
     }
   ];

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { X, Mail, User, Eye, Link as LinkIcon } from 'lucide-react';
 
 /**
  * Recipient Engagement Viewer Component
@@ -31,9 +32,9 @@ export function RecipientEngagementViewer({ templateId, templateName, onClose })
   };
 
   const getInterestLevel = (recipient) => {
-    if (recipient.clicked) return { level: 'VERY_INTERESTED', emoji: '🔥', color: '#4CAF50' };
-    if (recipient.opened) return { level: 'ENGAGED', emoji: '👀', color: '#FF9800' };
-    return { level: 'NOT_INTERESTED', emoji: '❌', color: '#f44336' };
+    if (recipient.clicked) return { level: 'Very Interested', color: 'text-green-500', bgColor: 'bg-green-500/10', borderColor: 'border-green-500' };
+    if (recipient.opened) return { level: 'Engaged', color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500' };
+    return { level: 'Not Interested', color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500' };
   };
 
   const getFilteredRecipients = () => {
@@ -45,8 +46,8 @@ export function RecipientEngagementViewer({ templateId, templateName, onClose })
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <p>Loading recipient data...</p>
+      <div className="p-6 text-center">
+        <p className="text-gray-400">Loading recipient data...</p>
       </div>
     );
   }
@@ -54,64 +55,62 @@ export function RecipientEngagementViewer({ templateId, templateName, onClose })
   const filtered = getFilteredRecipients();
 
   return (
-    <div style={{ backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '20px', color: 'white' }}>
+    <div className="bg-gray-900 rounded-lg p-6 text-white">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 style={{ margin: '0 0 8px 0', fontSize: '24px' }}>📧 {templateName}</h2>
-          <p style={{ margin: 0, color: '#999', fontSize: '14px' }}>Recipient Engagement Tracking</p>
+          <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+            <Mail className="w-6 h-6 text-indigo-400" />
+            {templateName}
+          </h2>
+          <p className="text-gray-400 text-sm">Recipient Engagement Tracking</p>
         </div>
         <button 
           onClick={onClose}
-          style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#999' }}
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
         >
-          ✕
+          <X className="w-6 h-6" />
         </button>
       </div>
 
       {/* Stats Summary */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
-          <div style={{ backgroundColor: '#2a2a2a', padding: '12px', borderRadius: '6px', borderLeft: '3px solid #2196F3' }}>
-            <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#999' }}>Total Recipients</p>
-            <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>{stats.total}</p>
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          <div className="bg-gray-800 p-4 rounded-lg border-l-4 border-blue-500">
+            <p className="text-gray-400 text-xs font-medium mb-1">Total Recipients</p>
+            <p className="text-2xl font-bold text-blue-400">{stats.total}</p>
           </div>
-          <div style={{ backgroundColor: '#2a2a2a', padding: '12px', borderRadius: '6px', borderLeft: '3px solid #4CAF50' }}>
-            <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#999' }}>🔥 Interested (Clicked)</p>
-            <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#4CAF50' }}>{stats.interested}</p>
+          <div className="bg-gray-800 p-4 rounded-lg border-l-4 border-green-500">
+            <p className="text-gray-400 text-xs font-medium mb-1">Interested (Clicked)</p>
+            <p className="text-2xl font-bold text-green-400">{stats.interested}</p>
           </div>
-          <div style={{ backgroundColor: '#2a2a2a', padding: '12px', borderRadius: '6px', borderLeft: '3px solid #FF9800' }}>
-            <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#999' }}>👀 Engaged (Opened)</p>
-            <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#FF9800' }}>{stats.engaged}</p>
+          <div className="bg-gray-800 p-4 rounded-lg border-l-4 border-amber-500">
+            <p className="text-gray-400 text-xs font-medium mb-1">Engaged (Opened)</p>
+            <p className="text-2xl font-bold text-amber-400">{stats.engaged}</p>
           </div>
-          <div style={{ backgroundColor: '#2a2a2a', padding: '12px', borderRadius: '6px', borderLeft: '3px solid #f44336' }}>
-            <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#999' }}>❌ Not Interested</p>
-            <p style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#f44336' }}>{stats.notInterested}</p>
+          <div className="bg-gray-800 p-4 rounded-lg border-l-4 border-red-500">
+            <p className="text-gray-400 text-xs font-medium mb-1">Not Interested</p>
+            <p className="text-2xl font-bold text-red-400">{stats.notInterested}</p>
           </div>
         </div>
       )}
 
       {/* Filter Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap gap-3 mb-6">
         {[
-          { label: 'All', value: 'all', emoji: '👥' },
-          { label: '🔥 Interested', value: 'interested' },
-          { label: '👀 Engaged', value: 'engaged' },
-          { label: '❌ Not Interested', value: 'notInterested' }
+          { label: 'All Recipients', value: 'all' },
+          { label: 'Very Interested', value: 'interested' },
+          { label: 'Engaged', value: 'engaged' },
+          { label: 'Not Interested', value: 'notInterested' }
         ].map(btn => (
           <button
             key={btn.value}
             onClick={() => setFilter(btn.value)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '4px',
-              border: 'none',
-              backgroundColor: filter === btn.value ? '#4CAF50' : '#3a3a3a',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: filter === btn.value ? 'bold' : 'normal'
-            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              filter === btn.value
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
           >
             {btn.label}
           </button>
@@ -119,55 +118,73 @@ export function RecipientEngagementViewer({ templateId, templateName, onClose })
       </div>
 
       {/* Recipients List */}
-      <div style={{ overflowY: 'auto', maxHeight: '500px' }}>
+      <div className="overflow-y-auto max-h-96 space-y-3 mb-6">
         {filtered.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>No recipients in this category</p>
+          <p className="text-center text-gray-400 py-8">No recipients in this category</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {filtered.map((recipient, idx) => {
-              const interest = getInterestLevel(recipient);
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    backgroundColor: '#2a2a2a',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    borderLeft: `3px solid ${interest.color}`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div>
-                    <p style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '500' }}>{recipient.email}</p>
-                    <div style={{ fontSize: '12px', color: '#999' }}>
-                      {recipient.opened && <span style={{ marginRight: '10px' }}>👁️ Opened</span>}
-                      {recipient.clicked && <span>🔗 Clicked ({recipient.events.filter(e => e.eventType === 'click').length})</span>}
-                      {!recipient.opened && <span>Never opened</span>}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 'bold', color: interest.color }}>
-                      {interest.emoji} {interest.level}
-                    </p>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#999' }}>
-                      {new Date(recipient.lastActivity).toLocaleDateString()}
-                    </p>
+          filtered.map((recipient, idx) => {
+            const interest = getInterestLevel(recipient);
+            return (
+              <div
+                key={idx}
+                className={`bg-gray-800 p-4 rounded-lg border-l-4 ${interest.borderColor} flex justify-between items-start`}
+              >
+                <div className="flex-1">
+                  <p className="font-medium text-white mb-2 flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-400" />
+                    {recipient.email}
+                  </p>
+                  <div className="flex gap-3 flex-wrap text-sm text-gray-400">
+                    {recipient.opened && (
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-3 h-3" /> Opened
+                      </span>
+                    )}
+                    {recipient.clicked && (
+                      <span className="flex items-center gap-1">
+                        <LinkIcon className="w-3 h-3" /> 
+                        Clicked ({recipient.events?.filter(e => e.eventType === 'click').length || 0})
+                      </span>
+                    )}
+                    {!recipient.opened && (
+                      <span className="text-red-400">Never opened</span>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                <div className="text-right ml-4">
+                  <p className={`font-bold text-sm mb-2 ${interest.color}`}>
+                    {interest.level}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(recipient.lastActivity).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
       {/* Legend */}
-      <div style={{ backgroundColor: '#2a2a2a', padding: '12px', borderRadius: '6px', marginTop: '15px', fontSize: '12px', color: '#b0b0b0' }}>
-        <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>📊 How Interest is Measured:</p>
-        <p style={{ margin: '4px 0' }}>🔥 <span style={{ color: '#4CAF50' }}>Very Interested</span>: Opened email AND clicked a link</p>
-        <p style={{ margin: '4px 0' }}>👀 <span style={{ color: '#FF9800' }}>Engaged</span>: Opened email but didn't click</p>
-        <p style={{ margin: '4px 0' }}>❌ <span style={{ color: '#f44336' }}>Not Interested</span>: Never opened email</p>
+      <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+        <p className="font-bold text-white mb-3 flex items-center gap-2">
+          <Mail className="w-4 h-4" />
+          How Interest is Measured
+        </p>
+        <div className="space-y-2 text-sm">
+          <p>
+            <span className="text-green-400 font-medium">Very Interested</span>
+            <span className="text-gray-400">: Opened email AND clicked a link</span>
+          </p>
+          <p>
+            <span className="text-amber-400 font-medium">Engaged</span>
+            <span className="text-gray-400">: Opened email but did not click</span>
+          </p>
+          <p>
+            <span className="text-red-400 font-medium">Not Interested</span>
+            <span className="text-gray-400">: Never opened email</span>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Menu, X, LayoutDashboard, Zap, Info } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Zap, Info, BarChart3 } from 'lucide-react';
 
 function Sidebar({ isOpen, onToggle }) {
   return (
@@ -30,6 +30,14 @@ function Sidebar({ isOpen, onToggle }) {
             <ul className='space-y-2'>
               <li>
                 <Link 
+                  to="/features" 
+                  className='block px-3 py-2.5 text-sm text-zinc-300 hover:text-lime-400 hover:bg-lime-500/10 rounded-lg transition-all duration-200 font-medium border-l-2 border-transparent hover:border-lime-500'
+                >
+                  Features
+                </Link>
+              </li>
+              <li>
+                <Link 
                   to="/dashboard" 
                   className='block px-3 py-2.5 text-sm text-zinc-300 hover:text-lime-400 hover:bg-lime-500/10 rounded-lg transition-all duration-200 font-medium border-l-2 border-transparent hover:border-lime-500'
                 >
@@ -38,7 +46,7 @@ function Sidebar({ isOpen, onToggle }) {
               </li>
               <li>
                 <Link 
-                  to="/Campaigns" 
+                  to="/campaigns" 
                   className='block px-3 py-2.5 text-sm text-zinc-300 hover:text-lime-400 hover:bg-lime-500/10 rounded-lg transition-all duration-200 font-medium border-l-2 border-transparent hover:border-lime-500'
                 >
                   Campaigns
@@ -46,12 +54,13 @@ function Sidebar({ isOpen, onToggle }) {
               </li>
               <li>
                 <Link 
-                  to="/features" 
+                  to="/campaign-tracker" 
                   className='block px-3 py-2.5 text-sm text-zinc-300 hover:text-lime-400 hover:bg-lime-500/10 rounded-lg transition-all duration-200 font-medium border-l-2 border-transparent hover:border-lime-500'
                 >
-                  Features
+                  Campaign Tracker
                 </Link>
               </li>
+              
             </ul>
           </div>
 
@@ -101,7 +110,7 @@ function Sidebar({ isOpen, onToggle }) {
                   to="/company-info" 
                   className='block px-3 py-2.5 text-sm text-zinc-300 hover:text-lime-400 hover:bg-lime-500/10 rounded-lg transition-all duration-200 font-medium border-l-2 border-transparent hover:border-lime-500'
                 >
-                  Personal Info
+                  Company Info
                 </Link>
               </li>
               <li>

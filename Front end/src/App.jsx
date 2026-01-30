@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useState } from 'react';
 import Dashboard from './components/Dashboard';
 import Campaigns from './components/Campaigns.jsx';
+import CampaignTracker from './components/CampaignTracker.jsx';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
@@ -45,6 +46,7 @@ function App() {
         {/* Dashboard Routes with Layout */}
         <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
         <Route path="/campaigns" element={<DashboardLayout><Campaigns /></DashboardLayout>} />
+        <Route path="/campaign-tracker" element={<DashboardLayout><CampaignTracker /></DashboardLayout>} />
         <Route path="/email-builder" element={<DashboardLayout><EmailBuilder /></DashboardLayout>} />
         <Route path="/email-body-editor" element={<DashboardLayout><EmailBodyEditor /></DashboardLayout>} />
         <Route path="/email-lists" element={<DashboardLayout><EmailLists /></DashboardLayout>} />
