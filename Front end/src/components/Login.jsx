@@ -29,7 +29,11 @@ function Login() {
       })
       .catch((error) => {
         console.error("Login error:", error);
-        alert("An error occurred during login.");
+        if (error.response && error.response.data) {
+          alert(error.response.data.message || "An error occurred during login");
+        } else {
+          alert("An error occurred during login. Please check the server connection.");
+        }
       });
   };
 

@@ -14,12 +14,23 @@ function Signup(){
     const handleSubmit=(e)=>{
         e.preventDefault()
         axios.post('http://localhost:3001/signup',{name,email,password})
-        .then(result=>{console.log(result)
-            // Don't store user data here - it will be fetched from database during login
-            alert('Account created successfully! Please login with your credentials.');
-            navigate('/login');
+        .then(result=>{
+            console.log(result)
+            if (result.data.success) {
+                alert('Account created successfully! Please login with your credentials.');
+                navigate('/login');
+            } else {
+                alert(result.data.message || 'Error creating account');
+            }
         })
-        .catch(error=>console.log(error))
+        .catch(error=>{
+            console.log(error)
+            if (error.response && error.response.data) {
+                alert(error.response.data.message || 'Error creating account');
+            } else {
+                alert('An error occurred during signup. Please try again.');
+            }
+        })
     }
     return (
         <div className="min-h-screen w-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center px-4">

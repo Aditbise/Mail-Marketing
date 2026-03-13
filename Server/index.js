@@ -147,25 +147,47 @@ app.post('/login', (req, res) => {
     .then(user => {
         if (user) {
             if (user.password === password) {
-                res.json("Success");
+                res.json({ 
+                    success: true, 
+                    message: "Login successful",
+                    user: {
+                        id: user._id,
+                        email: user.email,
+                        name: user.name || ''
+                    }
+                });
             } else {
-                res.json("Incorrect Password");
+                res.status(401).json({ 
+                    success: false, 
+                    message: "Incorrect Password" 
+                });
             }
         } else {
-            res.json("User does not exist please register :D");
+            res.status(401).json({ 
+                success: false, 
+                message: "User does not exist. Please register first" 
+            });
         }
     })
-    .catch(err => res.status(500).json({ message: 'Login error', error: err }));
+    .catch(err => res.status(500).json({ success: false, message: 'Login error', error: err }));
 });
 
 app.post('/signup', (req, res) => {
     UserModel.create(req.body)
-        .then(user => res.json(user))
+        .then(user => res.json({ 
+            success: true, 
+            message: "Signup successful",
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name
+            }
+        }))
         .catch(err => {
             if (err.code === 11000) {
-                res.status(400).json({ message: 'Email already exists!' });
+                res.status(400).json({ success: false, message: 'Email already exists!' });
             } else {
-                res.status(500).json({ message: 'Error signing up', error: err });
+                res.status(500).json({ success: false, message: 'Error signing up', error: err });
             }
         });
 });
