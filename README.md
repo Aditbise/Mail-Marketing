@@ -8,18 +8,6 @@ Mail Marketing is a comprehensive email marketing solution designed for managing
 
 ---
 
-## Language Composition
-
-Language 
-**JavaScript**
-**,CSS**
-**,TeX**
-**,HTML** 
-**,Shell**
-**,Batchfile**
-
----
-
 ## Technology Stack
 
 ### Frontend
