@@ -10,14 +10,13 @@ Mail Marketing is a comprehensive email marketing solution designed for managing
 
 ## Language Composition
 
-| Language | Bytes | Percentage |
-|----------|-------|------------|
-| **JavaScript** | 406,919 | **61.2%** |
-| **CSS** | 36,660 | **5.5%** |
-| **TeX** | 37,881 | **5.7%** |
-| **HTML** | 4,107 | **0.6%** |
-| **Shell** | 303 | **0.05%** |
-| **Batchfile** | 308 | **0.05%** |
+Language 
+**JavaScript**
+**,CSS**
+**,TeX**
+**,HTML** 
+**,Shell**
+**,Batchfile**
 
 ---
 
