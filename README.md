@@ -2,13 +2,13 @@
 
 A full-stack email marketing platform with a modern React (Vite) dashboard and a Node.js/Express backend for managing contacts, segments, templates, and campaigns with analytics, scheduling, and AI-powered email generation.
 
-## 🎯 Project Overview
+## Project Overview
 
 Mail Marketing is a comprehensive email marketing solution designed for managing email campaigns at scale. It includes contact segmentation, email template management, campaign scheduling, AI-assisted email generation, and detailed analytics tracking.
 
 ---
 
-## 📊 Language Composition
+## Language Composition
 
 | Language | Bytes | Percentage |
 |----------|-------|------------|
@@ -21,7 +21,7 @@ Mail Marketing is a comprehensive email marketing solution designed for managing
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Frontend
 - **React 19.1.0** – UI framework with hooks
@@ -61,7 +61,7 @@ Mail Marketing is a comprehensive email marketing solution designed for managing
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Mail-Marketing/
@@ -124,39 +124,39 @@ Mail-Marketing/
 
 ---
 
-## ✨ Core Features
+## Core Features
 
-### 📧 Email Management
+### Email Management
 - **Templates** – Create and manage reusable email templates
 - **Contact Lists** – Manage contacts with import/export (CSV, XLSX)
 - **Email Bodies** – Rich text email content with editor
 - **Email Tracking** – Track opens, clicks, and delivery status
 
-### 🎯 Campaign Features
+### Campaign Features
 - **Segmentation** – Create audience segments for targeted campaigns
 - **Campaign Builder** – Create campaigns with templates and recipients
 - **Scheduling** – Schedule campaigns for future sending (auto-dispatch every minute)
 - **Batch Sending** – Send to multiple segments simultaneously
 - **Delivery Tracking** – Real-time campaign analytics
 
-### 🤖 AI Features
+### AI Features
 - **AI Email Generation** – Generate email copy using Groq API
 - **Smart Content** – Context-aware email suggestions
 - **Brevo Integration** – Email delivery through professional provider
 
-### 📊 Analytics
+### Analytics
 - **Campaign Analytics** – View campaign performance metrics
 - **Delivery Reports** – Track email opens and clicks
 - **Segment Performance** – Compare segment engagement
 
-### 🏢 Company Settings
+### Company Settings
 - **Logo Upload** – Upload and manage company branding
 - **Profile Management** – Store company information
 - **SMTP Configuration** – Custom email sending configuration
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - **Node.js 16+** (for both frontend and backend)
@@ -285,7 +285,7 @@ bash start-dev.sh
 
 ---
 
-## 🗄️ Database Collections (MongoDB)
+## Database Collections (MongoDB)
 
 - **users** – User accounts and authentication
 - **emailtemplates** – Email template definitions
@@ -299,7 +299,7 @@ bash start-dev.sh
 
 ---
 
-## 🔧 Available Commands
+## Available Commands
 
 ### Frontend Commands (from Front end/ directory)
 
@@ -323,7 +323,7 @@ node test-brevo.js    # Test Brevo email API
 
 ---
 
-## 🔐 Security Features
+## Security Features
 
 - **JWT Authentication** – Secure token-based authentication
 - **Password Hashing** – Bcryptjs for password encryption
@@ -341,7 +341,7 @@ node test-brevo.js    # Test Brevo email API
 
 ---
 
-## 📝 Development Workflow
+## Development Workflow
 
 ### Starting Development
 
@@ -375,7 +375,7 @@ node test-brevo.js    # Test Brevo email API
 
 ---
 
-## 🧪 Testing Files
+## Testing Files
 
 The project includes several utility scripts for testing:
 
@@ -394,7 +394,7 @@ node test-brevo.js
 
 ---
 
-## 🎨 Frontend Architecture
+## Frontend Architecture
 
 - **Component-Based** – Modular React components
 - **Standalone Components** – Independent, reusable components
@@ -424,7 +424,7 @@ App (Router)
 
 ---
 
-## 🔙 Backend Architecture
+## Backend Architecture
 
 - **Monolithic Express Server** – All routes in index.js (73KB)
 - **RESTful API** – Standard REST conventions
@@ -455,7 +455,7 @@ MongoDB Database
 
 ---
 
-## 📦 Dependency Highlights
+## Dependency Highlights
 
 ### Frontend Key Dependencies
 - **React 19.1.0** – Latest React with concurrent features
@@ -475,7 +475,7 @@ MongoDB Database
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### MongoDB Connection Issues
 - Verify MONGODB_URI in .env
@@ -499,7 +499,7 @@ MongoDB Database
 
 ---
 
-## 📚 Technical Resume
+## Technical Resume
 
 **Full-stack email marketing platform** demonstrating expertise in:
 
@@ -524,7 +524,7 @@ MongoDB Database
 
 ---
 
-## 📄 Documentation
+## Documentation
 
 Additional documentation available in:
 - `Front end/README.md` – Frontend-specific setup and component details
@@ -533,33 +533,6 @@ Additional documentation available in:
 
 ---
 
-## 🔗 Repository
+## Repository
 
 **GitHub:** https://github.com/Aditbise/Mail-Marketing
-
-**Created:** August 29, 2025  
-**Last Updated:** June 3, 2026  
-**Language:** JavaScript (Primary), CSS, HTML, TeX  
-**License:** ISC  
-**Repository Size:** 4.9 MB
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
----
-
-## 📞 Support
-
-For issues, questions, or suggestions:
-1. Check existing issues on GitHub
-2. Review documentation in README files
-3. Test with provided utility scripts
-4. Check environment variable configuration
-5. Verify MongoDB and API key configurations
